@@ -1,6 +1,7 @@
 package com.webrob.model;
 
 import org.opencv.core.Mat;
+import org.opencv.core.Size;
 import org.opencv.highgui.Highgui;
 
 /**
@@ -42,8 +43,36 @@ public class LegoRecognition
     private String saveImage()
     {
         String pathToWrite = originalPath.replace("org/" + originalImageNameWithExt, "tmp/test.jpg");
+        convertToGray();
         Highgui.imwrite(pathToWrite, newImage);
         return pathToWrite;
+    }
+
+    private void convertToGray()
+    {
+        Size size = newImage.size();
+
+        for (int x=0; x <size.width; x++)
+        {
+            for (int y=0; y <size.height; y++)
+            {
+                double[] doubles = newImage.get(x, y);
+                double gray =0;
+                for (int i =0; i< doubles.length; i++)
+                {
+                   gray += doubles[i];
+                }
+                gray /= doubles.length;
+
+                for (int i =0; i< doubles.length; i++)
+                {
+                    doubles[i] = gray;
+                }
+
+                newImage.put(x,y, doubles);
+            }
+        }
+
     }
 
 
