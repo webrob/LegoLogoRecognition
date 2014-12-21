@@ -21,7 +21,7 @@ allprojects {
 
 configure(viewProjects) {
     dependencies {
-        compile project(':core')
+        compile project(':core-shared')
     }
 }
 

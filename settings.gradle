@@ -1,10 +1,8 @@
 rootProject.name = 'LegoLogoRecognition'
 
 def String[] modules = [
-    'core',
+    'core-shared',
     'GWT-view',
     'JavaFX-view'
 ]
 include modules
-
-
