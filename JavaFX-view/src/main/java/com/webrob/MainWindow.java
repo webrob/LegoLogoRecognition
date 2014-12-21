@@ -17,7 +17,6 @@ public class MainWindow extends Application
 	Parent root = FXMLLoader.load(getClass().getResource("/fxml/MainWindow.fxml"));
 
 	Scene scene = new Scene(root);
-
 	stage.setScene(scene);
 	stage.show();
     }
