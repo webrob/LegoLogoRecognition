@@ -1,0 +1,15 @@
+/* Formatting specific to the StockWatcher application */
+
+h1 {
+  font-size: 2em;
+  font-weight: bold;
+  text-align: center;
+}
+
+body, td, a, div, .p {
+  font-family: arial, sans-serif
+}
+
+body {
+  background: red;
+}

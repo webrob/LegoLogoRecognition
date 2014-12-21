@@ -1,0 +1,10 @@
+rootProject.name = 'LegoLogoRecognition'
+
+def String[] modules = [
+    'core',
+    'GWT-view',
+    'JavaFX-view'
+]
+include modules
+
+
