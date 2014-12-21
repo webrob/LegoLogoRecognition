@@ -18,6 +18,9 @@ public class LegoRecognition
     private String originalPath;
     private Mat newImage = new Mat();
     private String originalImageNameWithExt;
+    private Size size;
+    private final double[] WHITE_COLOR = new double[] { 255, 255, 255 };
+    private final double[] BLACK_COLOR = new double[] { 0, 0, 0 };
 
     public Mat getOriginalImage(String nameWithExtension)
     {
@@ -26,54 +29,119 @@ public class LegoRecognition
 	Mat originalImage = Highgui.imread(originalPath);
 	originalImage.copyTo(newImage);
 	originalImageNameWithExt = nameWithExtension;
+	size = originalImage.size();
 	return originalImage;
     }
 
     public Mat getNewImage()
     {
-        saveImage();
+	saveImage();
 	return newImage;
     }
 
     public String getNewImagePath()
     {
-        return saveImage();
+	return saveImage();
     }
 
     private String saveImage()
     {
-        String pathToWrite = originalPath.replace("org/" + originalImageNameWithExt, "tmp/test.jpg");
-        convertToGray();
-        Highgui.imwrite(pathToWrite, newImage);
-        return pathToWrite;
+	String pathToWrite = originalPath.replace("org/" + originalImageNameWithExt, "tmp/test.jpg");
+	//convertImageToGray();
+	segmentToBlackAndWhite();
+	regionGrowForEachSegment();
+	calculateForEachSegmentMomentum();
+	recognizeLetters();
+	checkCorrectLettersOrder();
+	markFoundLogos();
+	Highgui.imwrite(pathToWrite, newImage);
+	return pathToWrite;
     }
 
-    private void convertToGray()
+    private void convertImageToGray()
     {
-        Size size = newImage.size();
+	for (int x = 0; x < size.width; x++)
+	{
+	    for (int y = 0; y < size.height; y++)
+	    {
+		double[] pixel = newImage.get(x, y);
+		pixel = convertPixelToGray(pixel);
+		newImage.put(x, y, pixel);
+	    }
+	}
+    }
 
-        for (int x=0; x <size.width; x++)
-        {
-            for (int y=0; y <size.height; y++)
-            {
-                double[] doubles = newImage.get(x, y);
-                double gray =0;
-                for (int i =0; i< doubles.length; i++)
-                {
-                   gray += doubles[i];
-                }
-                gray /= doubles.length;
+    private double calculateGrayValue(double[] pixel)
+    {
+	double gray = 0;
+	for (double componentRGB : pixel)
+	{
+	    gray += componentRGB;
+	}
+	gray /= pixel.length;
+	return gray;
+    }
 
-                for (int i =0; i< doubles.length; i++)
-                {
-                    doubles[i] = gray;
-                }
+    private double[] convertPixelToGray(double[] pixel)
+    {
+	double gray = calculateGrayValue(pixel);
+	for (int i = 0; i < pixel.length; i++)
+	{
+	    pixel[i] = gray;
+	}
+	return pixel;
+    }
 
-                newImage.put(x,y, doubles);
-            }
-        }
+    private void changePixelColor(double[] pixel, double[] color)
+    {
+	System.arraycopy(color, 0, pixel, 0, pixel.length);
+    }
+
+    private void segmentToBlackAndWhite()
+    {
+	for (int x = 0; x < size.height; x++)
+	{
+	    for (int y = 0; y < size.width; y++)
+	    {
+		double[] pixel = newImage.get(x, y);
+		double gray = calculateGrayValue(pixel);
+		if (gray > 200)
+		{
+		    changePixelColor(pixel, WHITE_COLOR);
+		}
+		else
+		{
+		    changePixelColor(pixel, BLACK_COLOR);
+		}
+		newImage.put(x, y, pixel);
+	    }
+	}
+    }
+
+
+    private void regionGrowForEachSegment()
+    {
 
     }
 
+    private void calculateForEachSegmentMomentum()
+    {
+
+    }
+
+    private void recognizeLetters()
+    {
+
+    }
+
+    private void checkCorrectLettersOrder()
+    {
+
+    }
+
+    private void markFoundLogos()
+    {
+
+    }
 
 }
