@@ -1,0 +1,8 @@
+dependencies {
+    compile group: 'com.google.gwt', name: 'gwt-servlet', version: gwtVersion
+    compile group: 'com.google.gwt', name: 'gwt-dev', version: gwtVersion
+
+    compile group: 'org.springframework', name: 'spring-web', version: springVersion
+    compile group: 'org.springframework', name: 'spring-core', version: springVersion
+    compile group: 'org.springframework', name: 'spring-beans', version: springVersion
+}
