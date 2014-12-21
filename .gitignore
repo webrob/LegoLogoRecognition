@@ -3,7 +3,6 @@
 build
 gradle
 out
-src
 LegoLogoRecognition.iml
 gradlew.bat
 gradlew
