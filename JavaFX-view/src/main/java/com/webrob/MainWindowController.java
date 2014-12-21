@@ -1,13 +1,12 @@
 package com.webrob;
 
 
-import com.webrob.example.LegoRecognition;
+
 import com.webrob.utils.ImageHelper;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import org.opencv.core.Mat;
 
 import java.net.URL;
 import java.util.ResourceBundle;
