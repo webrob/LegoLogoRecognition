@@ -16,4 +16,14 @@ public class Segment
 	this.boundingRect = boundingRect;
 	this.gravityPoint = gravityPoint;
     }
+
+    public Point getGravityPoint()
+    {
+        return gravityPoint;
+    }
+
+    public Rect getBoundingRect()
+    {
+        return boundingRect;
+    }
 }

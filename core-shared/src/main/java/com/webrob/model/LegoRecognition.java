@@ -1,11 +1,14 @@
 package com.webrob.model;
 
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
 import org.opencv.core.Mat;
 import org.opencv.core.Rect;
 import org.opencv.core.Size;
 import org.opencv.highgui.Highgui;
 
 import java.awt.*;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -29,7 +32,8 @@ public class LegoRecognition
     private Size size;
     private final double[] WHITE_COLOR = new double[] { 255, 255, 255 };
     private final double[] BLACK_COLOR = new double[] { 0, 0, 0 };
-    private final double[] SEGMENT_START_COLOR = new double[] { 100, 0, 0 };
+    private final double[] SEGMENT_START_COLOR = new double[] { 50, 0, 0 };
+    private Multimap<Letter, Segment> recognizedLetters = HashMultimap.create();
 
     public Mat getOriginalImage(String nameWithExtension)
     {
@@ -62,7 +66,7 @@ public class LegoRecognition
 
 	segmentToBlackAndWhite();
 	calculateForEachSegmentMomentum();
-	recognizeLetters();
+	//recognizeLetters();
 	checkCorrectLettersOrder();
 	checkRedBackground();
 	markFoundLogos();
@@ -104,7 +108,6 @@ public class LegoRecognition
 	return pixel;
     }
 
-
     private void changeContrast(int contrast)
     {
 	for (int x = 0; x < size.height; x++)
@@ -114,7 +117,7 @@ public class LegoRecognition
 		double factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
 		double[] pixel = newImage.get(x, y);
 
-		for (int i =0; i < pixel.length; i++)
+		for (int i = 0; i < pixel.length; i++)
 		{
 		    pixel[i] = factor * (pixel[i] - 128) + 128;
 
@@ -127,7 +130,7 @@ public class LegoRecognition
 			pixel[i] = 0;
 		    }
 		}
-		newImage.put(x,y,pixel);
+		newImage.put(x, y, pixel);
 
 	    }
 	}
@@ -248,20 +251,21 @@ public class LegoRecognition
 
     private double[] getNextSegmentColor(double[] color)
     {
+	//color[1]+=70;
+
 	Double b = color[0];
 	Double g = color[1];
 	Double r = color[2];
 
-
-	if (b.intValue() < 254)
+	if (b.intValue() < 255)
 	{
 	    color[0]++;
 	}
-	else if (g.intValue() < 254)
+	else if (g.intValue() < 255)
 	{
 	    color[1]++;
 	}
-	else if (r.intValue() < 254)
+	else if (r.intValue() < 255)
 	{
 	    color[2]++;
 	}
@@ -293,9 +297,9 @@ public class LegoRecognition
 		{
 		    System.out.println("M " + z + " = " + NM[z]);
 		}
-		Letter letter = LetterManager.recognizeLetter(NM);
 
-		System.out.println(letter);
+		recognizeLetters(NM, rect, gravityPoint);
+
 		System.out.println("region " + i + " " + currentSegmentColor[0] + " " + currentSegmentColor[1] + " "
 				+ currentSegmentColor[2]);
 	    }
@@ -304,8 +308,6 @@ public class LegoRecognition
 	}
 
     }
-
-
 
     private double mpq(Rect boundingRect, double[] color, int p, int q)
     {
@@ -324,7 +326,7 @@ public class LegoRecognition
 	return result;
     }
 
-    private double[]  calculateMomentumsForColor(MomentumCalculator cal)
+    private double[] calculateMomentumsForColor(MomentumCalculator cal)
     {
 	double[] NM = new double[11];
 
@@ -400,16 +402,81 @@ public class LegoRecognition
 	return new Rect(x1, y1, y2 - y1, x2 - x1);
     }
 
-    private void recognizeLetters()
+    private void recognizeLetters(double[] NM, Rect rect, org.opencv.core.Point gravityPoint)
     {
-
+	Letter letter = LetterManager.recognizeLetter(NM);
+	Segment segment = new Segment(rect, gravityPoint);
+	System.out.println(letter);
+	recognizedLetters.put(letter, segment);
     }
 
     private void checkCorrectLettersOrder()
     {
+	Collection<Segment> allSegmentsL = recognizedLetters.get(Letter.L);
+	Collection<Segment> allSegmentsE = recognizedLetters.get(Letter.E);
+	Collection<Segment> allSegmentsG = recognizedLetters.get(Letter.G);
+	Collection<Segment> allSegmentsO = recognizedLetters.get(Letter.O);
 
+	for (Segment segmentL : allSegmentsL)
+	{
+	    for (Segment segmentO : allSegmentsO)
+	    {
+		Direction direction = Direction.Left;
+
+		LetterManager letterManager = new LetterManager(segmentL, segmentO);
+
+		for (Segment segmentE : allSegmentsE)
+		{
+		    letterManager.setLetterToCheckLocation(segmentE);
+		    letterManager.setLetterBefore(segmentL);
+		    letterManager.setLetterAfter(segmentO);
+
+		    //System.out.println(letterManager.isLetterBetween());
+
+		    if (letterManager.isLetterBetween())
+		    {
+			boolean isLNearE = letterManager.areLettersNearEachOther();
+			System.out.println(isLNearE);
+			if (isLNearE)
+			{
+			    for (Segment segmentG : allSegmentsG)
+			    {
+				letterManager.setLetterToCheckLocation(segmentG);
+				letterManager.setLetterBefore(segmentE);
+				letterManager.setLetterAfter(segmentO);
+
+				//System.out.println(letterManager.isLetterBetween());
+
+				if (letterManager.isLetterBetween())
+				{
+				    boolean isENearG = letterManager.areLettersNearEachOther();
+				    if (isENearG)
+				    {
+
+					letterManager.setLetterToCheckLocation(segmentO);
+					letterManager.setLetterBefore(segmentG);
+
+					boolean isGNearO = letterManager.areLettersNearEachOther();
+					if (isGNearO)
+					{
+					    Rect boundingRect = segmentL.getBoundingRect();
+					    System.out.println("LEGO!!!!!!!!!!!!!!!!!!!!!!!!!!" + boundingRect +
+							    segmentE.getBoundingRect() + " " + segmentG
+							    .getBoundingRect() + " " + segmentO.getBoundingRect());
+					}
+				    }
+
+				}
+			    }
+			}
+		    }
+
+		}
+
+	    }
+
+	}
     }
-
 
     private void checkRedBackground()
     {
