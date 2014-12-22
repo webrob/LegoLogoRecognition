@@ -19,7 +19,8 @@ public class LegoRecognition
 	System.loadLibrary(org.opencv.core.Core.NATIVE_LIBRARY_NAME);
     }
 
-    public static final int MIN_LOGO_AREA = 200;
+    public static final int MIN_SEGMENT_AREA = 20;
+    public static final int GRAY_SEGMENTATION_THRESHOLD = 210;
 
     protected final String PATH_TO_ORIGINAL_IMAGE_FOLDER = "images/org/";
     private String originalPath;
@@ -28,7 +29,7 @@ public class LegoRecognition
     private Size size;
     private final double[] WHITE_COLOR = new double[] { 255, 255, 255 };
     private final double[] BLACK_COLOR = new double[] { 0, 0, 0 };
-    private final double[] SEGMENT_START_COLOR = new double[] { 150, 0, 0 };
+    private final double[] SEGMENT_START_COLOR = new double[] { 100, 0, 0 };
 
     public Mat getOriginalImage(String nameWithExtension)
     {
@@ -55,7 +56,10 @@ public class LegoRecognition
     private String saveImage()
     {
 	String pathToWrite = originalPath.replace("org/" + originalImageNameWithExt, "tmp/test.jpg");
+
+	//changeContrast(50);
 	//convertImageToGray();
+
 	segmentToBlackAndWhite();
 	calculateForEachSegmentMomentum();
 	recognizeLetters();
@@ -100,6 +104,35 @@ public class LegoRecognition
 	return pixel;
     }
 
+
+    private void changeContrast(int contrast)
+    {
+	for (int x = 0; x < size.height; x++)
+	{
+	    for (int y = 0; y < size.width; y++)
+	    {
+		double factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+		double[] pixel = newImage.get(x, y);
+
+		for (int i =0; i < pixel.length; i++)
+		{
+		    pixel[i] = factor * (pixel[i] - 128) + 128;
+
+		    if (pixel[i] > 255)
+		    {
+			pixel[i] = 255;
+		    }
+		    else if (pixel[i] < 0)
+		    {
+			pixel[i] = 0;
+		    }
+		}
+		newImage.put(x,y,pixel);
+
+	    }
+	}
+    }
+
     private void changePixelColor(double[] pixel, double[] color)
     {
 	System.arraycopy(color, 0, pixel, 0, pixel.length);
@@ -113,7 +146,7 @@ public class LegoRecognition
 	    {
 		double[] pixel = newImage.get(x, y);
 		double gray = calculateGrayValue(pixel);
-		if (gray > 210)
+		if (gray > GRAY_SEGMENTATION_THRESHOLD)
 		{
 		    changePixelColor(pixel, WHITE_COLOR);
 		}
@@ -218,6 +251,8 @@ public class LegoRecognition
 	Double b = color[0];
 	Double g = color[1];
 	Double r = color[2];
+
+
 	if (b.intValue() < 254)
 	{
 	    color[0]++;
@@ -230,8 +265,8 @@ public class LegoRecognition
 	{
 	    color[2]++;
 	}
-
 	return color;
+
     }
 
     private void calculateForEachSegmentMomentum()
@@ -245,7 +280,7 @@ public class LegoRecognition
 	    Rect rect = calculateBoundingRectForColor(currentSegmentColor);
 	    double area = mpq(rect, currentSegmentColor, 0, 0);
 
-	    if (area > MIN_LOGO_AREA)
+	    if (area > MIN_SEGMENT_AREA)
 	    {
 		double ax = mpq(rect, currentSegmentColor, 1, 0) / area;
 		double ay = mpq(rect, currentSegmentColor, 0, 1) / area;
@@ -253,43 +288,16 @@ public class LegoRecognition
 		MomentumCalculator cal = new MomentumCalculator(newImage, rect, currentSegmentColor, gravityPoint,
 				area);
 
-		double[] NM = new double[11];
-
-		NM[1] = cal.N(2, 0) + cal.N(0, 2);
-
-		NM[2] = Math.pow(cal.N(2, 0) - cal.N(0, 2), 2) + 4 * Math.pow(cal.N(1, 1), 2);
-
-		NM[3] = Math.pow(cal.N(3, 0) - 3 * cal.N(1, 2), 2) + Math.pow(3 * cal.N(2, 1) - cal.N(0, 3), 2);
-
-		NM[4] = Math.pow(cal.N(3, 0) + cal.N(1, 2), 2) + Math.pow(cal.N(2, 1) + cal.N(0, 3), 2);
-
-		NM[5] = (cal.N(3, 0) - 3 * cal.N(1, 2)) * (cal.N(3, 0) + cal.N(1, 2)) *
-				(Math.pow(cal.N(3, 0) + cal.N(1, 2), 2) - 3 * Math.pow(cal.N(2, 1) + cal.N(0, 3), 2))
-				+ (3 * cal.N(2, 1) - cal.N(0, 3)) * (cal.N(2, 1) + cal.N(0, 3)) *
-				(3 * Math.pow(cal.N(3, 0) + cal.N(1, 2), 2) - Math.pow(cal.N(2, 1) + cal.N(0, 3), 2));
-
-		NM[6] = (cal.N(2, 0) - cal.N(0, 2)) * (Math.pow(cal.N(3, 0) + cal.N(1, 2), 2) - Math.pow(cal.N(2, 1) +
-				cal.N(0, 3), 2)) + 4 * cal.N(1, 1) * (cal.N(3, 0) + cal.N(1, 2)) * (cal.N(2, 1) +
-				cal.N(0, 3));
-
-		NM[7] = cal.N(2, 0) * cal.N(0, 2) + Math.pow(cal.N(1, 1), 2);
-
-		NM[8] = cal.N(3, 0) * cal.N(1, 2) + cal.N(2, 1) * cal.N(0, 3) - Math.pow(cal.N(1, 2), 2) - Math
-				.pow(cal.N(2, 1), 2);
-
-		NM[9] = cal.N(2, 0) * (cal.N(2, 1) * cal.N(0, 3) - Math.pow(cal.N(1, 2), 2)) + cal.N(0, 2) *
-				(cal.N(3, 0) * cal.N(1, 2) - Math.pow(cal.N(2, 1), 2)) - cal.N(1, 1) *
-				(cal.N(3, 0) * cal.N(0, 3) - cal.N(2, 1) * cal.N(1, 2));
-
-		NM[10] = Math.pow(cal.N(3, 0) * cal.N(0, 3) - cal.N(1, 2) * cal.N(2, 1), 2) -
-				4 * (cal.N(3, 0) * cal.N(1, 2) - Math.pow(cal.N(2, 1), 2)) *
-						(cal.N(0, 3) * cal.N(2, 1) - cal.N(1, 2));
-
+		double[] NM = calculateMomentumsForColor(cal);
 		for (int z = 1; z < 11; z++)
 		{
-		    System.out.println(NM[z]);
+		    System.out.println("M " + z + " = " + NM[z]);
 		}
+		Letter letter = LetterManager.recognizeLetter(NM);
 
+		System.out.println(letter);
+		System.out.println("region " + i + " " + currentSegmentColor[0] + " " + currentSegmentColor[1] + " "
+				+ currentSegmentColor[2]);
 	    }
 
 	    currentSegmentColor = getNextSegmentColor(currentSegmentColor);
@@ -297,29 +305,7 @@ public class LegoRecognition
 
     }
 
-    private double N(Rect boundingRect, double[] color, org.opencv.core.Point centreOfGravityPoint, double area, int p, int q)
-    {
-	return Mpq(boundingRect, color, centreOfGravityPoint, p, q) /
-			Math.pow(area, (p + q) / 2 + 1);
 
-    }
-
-    private double Mpq(Rect boundingRect, double[] color, org.opencv.core.Point centreOfGravityPoint, int p, int q)
-    {
-	double result = 0;
-
-	for (int x = boundingRect.x; x < boundingRect.x + boundingRect.height; x++)
-	{
-	    for (int y = boundingRect.y; y < boundingRect.y + boundingRect.width; y++)
-	    {
-		double[] pixel = newImage.get(x, y);
-		result += Math.pow(x - centreOfGravityPoint.x, p) * Math.pow(y - centreOfGravityPoint.y, q) *
-				(RecognitionHelper.isPixelColor(pixel, color) ? 1 : 0);
-	    }
-	}
-
-	return result;
-    }
 
     private double mpq(Rect boundingRect, double[] color, int p, int q)
     {
@@ -338,9 +324,40 @@ public class LegoRecognition
 	return result;
     }
 
-    private void calculateMomentForColor(double[] color)
+    private double[]  calculateMomentumsForColor(MomentumCalculator cal)
     {
+	double[] NM = new double[11];
 
+	NM[1] = cal.N(2, 0) + cal.N(0, 2);
+
+	NM[2] = Math.pow(cal.N(2, 0) - cal.N(0, 2), 2) + 4 * Math.pow(cal.N(1, 1), 2);
+
+	NM[3] = Math.pow(cal.N(3, 0) - 3 * cal.N(1, 2), 2) + Math.pow(3 * cal.N(2, 1) - cal.N(0, 3), 2);
+
+	NM[4] = Math.pow(cal.N(3, 0) + cal.N(1, 2), 2) + Math.pow(cal.N(2, 1) + cal.N(0, 3), 2);
+
+	NM[5] = (cal.N(3, 0) - 3 * cal.N(1, 2)) * (cal.N(3, 0) + cal.N(1, 2)) *
+			(Math.pow(cal.N(3, 0) + cal.N(1, 2), 2) - 3 * Math.pow(cal.N(2, 1) + cal.N(0, 3), 2))
+			+ (3 * cal.N(2, 1) - cal.N(0, 3)) * (cal.N(2, 1) + cal.N(0, 3)) *
+			(3 * Math.pow(cal.N(3, 0) + cal.N(1, 2), 2) - Math.pow(cal.N(2, 1) + cal.N(0, 3), 2));
+
+	NM[6] = (cal.N(2, 0) - cal.N(0, 2)) * (Math.pow(cal.N(3, 0) + cal.N(1, 2), 2) - Math.pow(cal.N(2, 1) +
+			cal.N(0, 3), 2)) + 4 * cal.N(1, 1) * (cal.N(3, 0) + cal.N(1, 2)) * (cal.N(2, 1) +
+			cal.N(0, 3));
+
+	NM[7] = cal.N(2, 0) * cal.N(0, 2) + Math.pow(cal.N(1, 1), 2);
+
+	NM[8] = cal.N(3, 0) * cal.N(1, 2) + cal.N(2, 1) * cal.N(0, 3) - Math.pow(cal.N(1, 2), 2) - Math
+			.pow(cal.N(2, 1), 2);
+
+	NM[9] = cal.N(2, 0) * (cal.N(2, 1) * cal.N(0, 3) - Math.pow(cal.N(1, 2), 2)) + cal.N(0, 2) *
+			(cal.N(3, 0) * cal.N(1, 2) - Math.pow(cal.N(2, 1), 2)) - cal.N(1, 1) *
+			(cal.N(3, 0) * cal.N(0, 3) - cal.N(2, 1) * cal.N(1, 2));
+
+	NM[10] = Math.pow(cal.N(3, 0) * cal.N(0, 3) - cal.N(1, 2) * cal.N(2, 1), 2) -
+			4 * (cal.N(3, 0) * cal.N(1, 2) - Math.pow(cal.N(2, 1), 2)) *
+					(cal.N(0, 3) * cal.N(2, 1) - cal.N(1, 2));
+	return NM;
     }
 
     private Rect calculateBoundingRectForColor(double[] color)
@@ -378,7 +395,6 @@ public class LegoRecognition
 
 	    }
 	}
-
 	//System.out.println(x1 + " " + y1 + " " + x2 + " " + y2);
 
 	return new Rect(x1, y1, y2 - y1, x2 - x1);
@@ -394,12 +410,13 @@ public class LegoRecognition
 
     }
 
-    private void markFoundLogos()
+
+    private void checkRedBackground()
     {
 
     }
 
-    private void checkRedBackground()
+    private void markFoundLogos()
     {
 
     }

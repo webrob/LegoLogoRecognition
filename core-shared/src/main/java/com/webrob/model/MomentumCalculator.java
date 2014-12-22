@@ -15,7 +15,7 @@ public class MomentumCalculator
     private final double area;
     private final Mat image;
 
-    public MomentumCalculator(Mat image, Rect boundingRect, double[] color, org.opencv.core.Point centreOfGravityPoint, double area)
+    public MomentumCalculator(Mat image, Rect boundingRect, double[] color, Point centreOfGravityPoint, double area)
     {
         this.image = image;
         this.boundingRect = boundingRect;
@@ -31,7 +31,7 @@ public class MomentumCalculator
 
     }
 
-    private double Mpq(Rect boundingRect, double[] color, org.opencv.core.Point centreOfGravityPoint, int p, int q)
+    private double Mpq(Rect boundingRect, double[] color, Point centreOfGravityPoint, int p, int q)
     {
         double result = 0;
 
