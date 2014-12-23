@@ -3,6 +3,9 @@ package com.webrob.model;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Created by Robert on 2014-12-22.
  */
@@ -94,11 +97,11 @@ public class LetterManager
 	}
 	boolean isLetterBetween;
 
-	if (mainLetterPoint.y <= letterBeforePoint.y || mainLetterPoint.y >= letterAfterPoint.y)
+	//if (mainLetterPoint.y <= letterBeforePoint.y || mainLetterPoint.y >= letterAfterPoint.y)
 	{
 	    isLetterBetween = false;
 	}
-	else
+	//else
 	{
 	    double distanceFromStraight = calculateDistanceFromStraight();
 	    isLetterBetween = distanceFromStraight < 5;
@@ -115,7 +118,6 @@ public class LetterManager
 
 	return gravityCenterDistance < diagonalFirstRect;
     }
-
 
     private double caculateGravityCenterDistance()
     {
@@ -135,32 +137,8 @@ public class LetterManager
 
     private double calculateEuclideanDistance(Point p1, Point p2)
     {
-	return Math.sqrt(Math.pow(p1.x-p2.x,2) +Math.pow(p1.y-p2.y,2));
+	return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
     }
-
-    /*
-    public boolean areLettersNearEachOther()
-    {
-	Rect firstRect;
-	Rect secondRect;
-
-	if (direction == Direction.Right)
-	{
-	    firstRect = letterBefore.getBoundingRect();
-	    secondRect = letterToCheckLocation.getBoundingRect();
-	}
-	else
-	{
-	    firstRect = letterToCheckLocation.getBoundingRect();
-	    secondRect = letterBefore.getBoundingRect();
-	}
-
-	double distance = (firstRect.width + secondRect.width / 2.0f) / 2.0f;
-
-	double dist = secondRect.y - (firstRect.y + firstRect.width);
-	return dist < distance;
-    }
-    */
 
     private double calculateDistanceFromStraight()
     {
@@ -175,6 +153,72 @@ public class LetterManager
 
 	return Math.abs(-a * mainLetterPoint.y + mainLetterPoint.x - b) /
 			Math.sqrt(Math.pow(a, 2) + Math.pow(b, 2));
+    }
+
+    public List<Point> calculatePointsAbove(Lego lego)
+    {
+	List<Point> points = new ArrayList<>();
+
+	Segment segmentL = lego.getSegmentL();
+	Segment segmentO = lego.getSegmentO();
+	org.opencv.core.Point letterBeforePoint = segmentL.getGravityPoint();
+	org.opencv.core.Point letterAfterPoint = segmentO.getGravityPoint();
+
+	double a = (letterAfterPoint.x - letterBeforePoint.x) /
+			(letterAfterPoint.y - letterBeforePoint.y);
+
+	double b = letterBeforePoint.x - letterBeforePoint.y * a;
+
+	Rect boundingRect = lego.getBoundingRect();
+	double diagonal = calculateRectDiagonal(boundingRect);
+
+	double alfa = Math.atan(a);
+
+
+	double factorBAbove = b + diagonal / 3.5 / Math.cos(alfa);
+
+	for (double y = boundingRect.y - boundingRect.width; y < boundingRect.y + boundingRect.width; y += boundingRect.width / 25)
+	{
+	    double x = a * y + factorBAbove;
+
+	    Point p = new Point(x, y);
+	    points.add(p);
+	}
+
+	return points;
+    }
+
+    public List<Point> calculatePointsUnder(Lego lego)
+    {
+	List<Point> points = new ArrayList<>();
+
+	Segment segmentL = lego.getSegmentL();
+	Segment segmentO = lego.getSegmentO();
+	org.opencv.core.Point letterBeforePoint = segmentL.getGravityPoint();
+	org.opencv.core.Point letterAfterPoint = segmentO.getGravityPoint();
+
+	double a = (letterAfterPoint.x - letterBeforePoint.x) /
+			(letterAfterPoint.y - letterBeforePoint.y);
+
+	double b = letterBeforePoint.x - letterBeforePoint.y * a;
+
+	Rect boundingRect = lego.getBoundingRect();
+	double diagonal = calculateRectDiagonal(boundingRect);
+
+	double alfa = Math.atan(a);
+	System.out.println(alfa * 180/ Math.PI + " a = " +a);
+
+	double factorBAbove = b - diagonal / 3.5 / Math.cos(alfa);
+
+	for (double y = boundingRect.y ; y < boundingRect.y + 2 *boundingRect.width; y += boundingRect.width / 25)
+	{
+	    double x = a * y + factorBAbove;
+
+	    Point p = new Point(x, y);
+	    points.add(p);
+	}
+
+	return points;
     }
 
 }

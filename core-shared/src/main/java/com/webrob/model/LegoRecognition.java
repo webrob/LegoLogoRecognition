@@ -2,15 +2,12 @@ package com.webrob.model;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import org.opencv.core.Mat;
-import org.opencv.core.Rect;
-import org.opencv.core.Size;
+import org.opencv.core.*;
 import org.opencv.highgui.Highgui;
 
-import java.awt.*;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
+import java.awt.Point;
+import java.util.*;
+import java.util.List;
 
 /**
  * Created by Robert on 2014-12-21.
@@ -33,6 +30,7 @@ public class LegoRecognition
     private final double[] WHITE_COLOR = new double[] { 255, 255, 255 };
     private final double[] BLACK_COLOR = new double[] { 0, 0, 0 };
     private final double[] GREEN_COLOR = new double[] { 0, 255, 0 };
+    private final double[] RED_COLOR = new double[] { 0, 0, 255 };
     private final double[] SEGMENT_START_COLOR = new double[] { 10, 0, 0 };
     private Multimap<Letter, Segment> recognizedLetters = HashMultimap.create();
     private Mat originalImage;
@@ -66,12 +64,15 @@ public class LegoRecognition
 	//changeContrast(50);
 	//convertImageToGray();
 
+
 	segmentToBlackAndWhite();
 	calculateForEachSegmentMomentum();
+
 	//recognizeLetters();
 	checkCorrectLettersOrder();
 	//isLogoOnRedBackground();
-	markFoundLogos();
+	//markFoundLogos();
+
 	Highgui.imwrite(pathToWrite, newImage);
 	return pathToWrite;
     }
@@ -423,8 +424,6 @@ public class LegoRecognition
 	{
 	    for (Segment segmentO : allSegmentsO)
 	    {
-
-
 		LetterManager letterManager = new LetterManager(segmentL, segmentO);
 
 		for (Segment segmentE : allSegmentsE)
@@ -470,8 +469,15 @@ public class LegoRecognition
 
 					    Rect boundingBox = lego.getBoundingRect();
 
+					    List<org.opencv.core.Point> pointsAbove = letterManager
+							    .calculatePointsAbove(lego);
 
-					    if (isLogoOnRedBackground(boundingBox))
+					    List<org.opencv.core.Point> pointsUnder = letterManager
+							    .calculatePointsUnder(lego);
+
+					    boolean pointsOnRedBackground = drawPoints(pointsAbove, pointsUnder);
+
+					    if (pointsOnRedBackground)
 					    {
 						drawFoundLogoFrame(boundingBox);
 					    }
@@ -488,6 +494,67 @@ public class LegoRecognition
 	    }
 
 	}
+    }
+
+
+    private boolean drawPoints(List<org.opencv.core.Point> pointsAbove, List<org.opencv.core.Point> pointsUnder)
+    {
+	System.out.println(pointsAbove.size() + " " + pointsUnder.size());
+
+	int numberRedPixelsAbove = 0;
+	int numberRedPixelsUnder = 0;
+
+	for (org.opencv.core.Point point : pointsAbove)
+	{
+	    int x = (int)point.x;
+	    int y = (int)point.y;
+	    if (x > 0 && y > 0)
+	    {
+		System.out.println(point);
+		newImage.put(x, y, RED_COLOR);
+		newImage.put(x + 1, y, RED_COLOR);
+		newImage.put(x, y + 1, RED_COLOR);
+		newImage.put(x + 1, y + 1, RED_COLOR);
+
+		double[] pixel = originalImage.get(x, y);
+		if (pixel != null)
+		{
+		    if (isColorSimilarToRed(pixel))
+		    {
+			numberRedPixelsAbove++;
+		    }
+		}
+	    }
+	}
+
+
+	for (org.opencv.core.Point point : pointsUnder)
+	{
+	    int x = (int)point.x;
+	    int y = (int)point.y;
+	    System.out.println(point);
+	    if (x > 0 && y > 0)
+	    {
+		newImage.put(x, y, RED_COLOR);
+		newImage.put(x + 1, y, RED_COLOR);
+		newImage.put(x, y + 1, RED_COLOR);
+		newImage.put(x + 1, y + 1, RED_COLOR);
+
+		double[] pixel = originalImage.get(x, y);
+		if (pixel != null)
+		{
+		    if (isColorSimilarToRed(pixel))
+		    {
+			numberRedPixelsUnder++;
+		    }
+		}
+	    }
+	}
+
+	System.out.println(numberRedPixelsAbove + " " + numberRedPixelsUnder);
+
+	return numberRedPixelsAbove >= 2 && numberRedPixelsUnder >= 2;
+
     }
 
     private void drawFoundLogoFrame(Rect rect)
@@ -508,40 +575,10 @@ public class LegoRecognition
 	    newImage.put(rect.x + rect.height, y, GREEN_COLOR);
 	    newImage.put(rect.x + rect.height + 1, y, GREEN_COLOR);
 	}
-
-
     }
-
-    private boolean isLogoOnRedBackground(Rect rect)
-    {
-	boolean isLogoOnRedBackground = true;
-
-	int i =0;
-	for (int y = rect.y; y < rect.y + rect.width ; y+=rect.width/4)
-	{
-	    double[] pixelAbove = originalImage.get(rect.x - rect.height / 4, y);
-	    double[] pixelUnder = originalImage.get(rect.x + rect.height + rect.height/4, y);
-
-	    if (!isColorSimilarToRed(pixelAbove) || !isColorSimilarToRed(pixelUnder))
-	    {
-		//isLogoOnRedBackground = false;
-	    }
-	    i++;
-	}
-
-	System.out.println("i " + i);
-	return  isLogoOnRedBackground;
-    }
-
-
     private boolean isColorSimilarToRed(double[] color)
     {
 	return (color[0] < 80 && color[1] < 80 && color[2] > 180);
-    }
-
-    private void markFoundLogos()
-    {
-
     }
 
 }

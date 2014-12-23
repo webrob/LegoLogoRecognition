@@ -9,6 +9,26 @@ import java.awt.*;
  */
 public class Lego
 {
+    public Segment getSegmentL()
+    {
+	return segmentL;
+    }
+
+    public Segment getSegmentE()
+    {
+	return segmentE;
+    }
+
+    public Segment getSegmentG()
+    {
+	return segmentG;
+    }
+
+    public Segment getSegmentO()
+    {
+	return segmentO;
+    }
+
     private final Segment segmentL;
     private final Segment segmentE;
     private final Segment segmentG;
