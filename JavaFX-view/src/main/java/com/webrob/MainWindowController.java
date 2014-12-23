@@ -1,7 +1,9 @@
 package com.webrob;
 
+import com.webrob.logic.ProcessedStagesImagesListener;
 import com.webrob.utils.ImageHelper;
 import com.webrob.utils.ProcessedStagesImages;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.image.Image;
@@ -16,7 +18,7 @@ import java.util.ResourceBundle;
 /**
  * @author Robert
  */
-public class MainWindowController implements Initializable
+public class MainWindowController implements Initializable, ProcessedStagesImagesListener
 {
     @FXML private ImageView orgImageView;
     @FXML private ImageView blackAndWhiteSegmentationImageView;
@@ -47,6 +49,7 @@ public class MainWindowController implements Initializable
 	if (selectedFile != null)
 	{
             imageHelper = new ImageHelper(selectedFile);
+            imageHelper.addListener(this);
 	    Image imageFromFile = imageHelper.getImageFromFile();
 	    orgImageView.setImage(imageFromFile);
 	}
@@ -54,11 +57,23 @@ public class MainWindowController implements Initializable
 
     public void recognizeLegoPressed()
     {
-        ProcessedStagesImages stagesImages = imageHelper.recognizeLego();
+        imageHelper.recognizeLego();
 
-        blackAndWhiteSegmentationImageView.setImage(stagesImages.getBlackAndWhiteSegmentationImage());
-        markedLegoWithRedBackgroundSamplingImageView.setImage(stagesImages.getMarkedLegoWithRedBackgroundSamplingImage());
-        originalImageWithMarkedLegoImageView.setImage(stagesImages.getOriginalImageWithMarkedLegoImage());
+
+    }
+
+    @Override
+    public void processedStageImagesAreReady(final ProcessedStagesImages stagesImages)
+    {
+        Platform.runLater(new Runnable()
+        {
+            @Override public void run()
+            {
+                blackAndWhiteSegmentationImageView.setImage(stagesImages.getBlackAndWhiteSegmentationImage());
+                markedLegoWithRedBackgroundSamplingImageView.setImage(stagesImages.getMarkedLegoWithRedBackgroundSamplingImage());
+                originalImageWithMarkedLegoImageView.setImage(stagesImages.getOriginalImageWithMarkedLegoImage());
+            }
+        });
     }
 }
 

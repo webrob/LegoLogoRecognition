@@ -7,6 +7,7 @@ import com.webrob.recognition.domain.Segment;
 import com.webrob.recognition.utils.GlobalDef;
 import com.webrob.recognition.utils.RecognitionHelper;
 import org.opencv.core.Mat;
+import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Size;
 
@@ -36,7 +37,7 @@ public class MomentumAllSegmentsCalculator
 	    {
 		double ax = mpq(rect, currentSegmentColor, 1, 0) / area;
 		double ay = mpq(rect, currentSegmentColor, 0, 1) / area;
-		org.opencv.core.Point gravityPoint = new org.opencv.core.Point(ax, ay);
+		Point gravityPoint = new org.opencv.core.Point(ax, ay);
 		MomentumCalculator cal = new MomentumCalculator(processingImage, rect, currentSegmentColor,
 				gravityPoint,
 				area);
@@ -46,11 +47,7 @@ public class MomentumAllSegmentsCalculator
 		{
 		    System.out.println("M " + z + " = " + NM[z]);
 		}
-
 		recognizeLetters(NM, rect, gravityPoint);
-
-		//System.out.println("region " + i + " " + currentSegmentColor[0] + " " + currentSegmentColor[1] + " "
-		//+ currentSegmentColor[2]);
 	    }
 
 	    currentSegmentColor = RecognitionHelper.getNextSegmentColor(currentSegmentColor);

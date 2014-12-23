@@ -21,21 +21,10 @@ public class RegionGrow
 	this.processingImage = processingImage;
     }
 
-
     public int regionGrowForEachSegment()
     {
 	int segmentsFound = 0;
 	Size size = processingImage.size();
-	/*
-	for (int x = 0; x < size.height; x++)
-	{
-	    processingImage.put(x, 0, BLACK_COLOR);
-	}
-	for (int y = 0; y < size.width; y++)
-	{
-	    processingImage.put(0, y, BLACK_COLOR);
-	}
-	*/
 
 	double[] nextSegmentColor = GlobalDef.SEGMENT_START_COLOR.clone();
 	for (int x = 1; x < size.height; x += 4)
@@ -49,8 +38,6 @@ public class RegionGrow
 		    regionGrow(point, nextSegmentColor);
 		    nextSegmentColor = RecognitionHelper.getNextSegmentColor(nextSegmentColor);
 		    segmentsFound++;
-		    //System.out.println(segmentsFound);
-		    //System.out.println(nextSegmentColor[0] + " "+ nextSegmentColor[1] +  " "+ nextSegmentColor[2]);
 		}
 	    }
 	}

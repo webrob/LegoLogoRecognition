@@ -10,6 +10,9 @@ import org.opencv.core.Mat;
 import org.opencv.core.Rect;
 import org.opencv.highgui.Highgui;
 
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -22,7 +25,7 @@ public class LegoRecognitionImpl implements LegoRecognition
 	System.loadLibrary(org.opencv.core.Core.NATIVE_LIBRARY_NAME);
     }
 
-
+    private final List<ImageProcessingListener> listeners = new ArrayList<>();
     private Mat originalImage;
     private Mat processingImage = new Mat();
     private String filePathToSave;
@@ -35,7 +38,7 @@ public class LegoRecognitionImpl implements LegoRecognition
     }
 
     @Override
-    public ProcessedStagesPaths calculateProcessedStagePaths()
+    public void calculateProcessedStagePaths()
     {
 	ProcessedStagesPaths stagesPaths = new ProcessedStagesPaths();
 
@@ -53,7 +56,6 @@ public class LegoRecognitionImpl implements LegoRecognition
 	LegoFinder legoFinder = new LegoFinder();
 	List<Lego> legoLogosOnAnyBackgroundColor = legoFinder.findLegoLogos(recognizedLetters);
 
-
 	RedBackgroundVerifier backgroundVerifier = new RedBackgroundVerifier(originalImage, processingImage);
 	for (Lego lego : legoLogosOnAnyBackgroundColor)
 	{
@@ -66,15 +68,29 @@ public class LegoRecognitionImpl implements LegoRecognition
 	    }
 	}
 
-	String markedLegoWithRedBackgroundSamplingPath = saveImage("2-markedLegoWithRedBackgroundSampling.jpg", processingImage);
+	String markedLegoWithRedBackgroundSamplingPath = saveImage("2-markedLegoWithRedBackgroundSampling.jpg",
+			processingImage);
 	stagesPaths.setMarkedLegoWithRedBackgroundSamplingPath(markedLegoWithRedBackgroundSamplingPath);
 
 	String originalImageWithMarkedLegoPath = saveImage("3-originalImageWithMarkedLego.jpg", originalImage);
 	stagesPaths.setOriginalImageWithMarkedLegoPath(originalImageWithMarkedLegoPath);
 
-	return stagesPaths;
+	notifyListeners(stagesPaths);
     }
 
+    @Override
+    public void addListeners(ImageProcessingListener listener)
+    {
+	listeners.add(listener);
+    }
+
+    private void notifyListeners(ProcessedStagesPaths stagesPaths)
+    {
+	for (ImageProcessingListener listener : listeners)
+	{
+	    listener.imageProcessingHasFinished(stagesPaths);
+	}
+    }
 
     private String saveImage(String nameWithExt, Mat image)
     {
@@ -82,4 +98,12 @@ public class LegoRecognitionImpl implements LegoRecognition
 	Highgui.imwrite(pathToSavedImage, image);
 	return pathToSavedImage;
     }
+
+    @Override
+    public void run()
+    {
+	calculateProcessedStagePaths();
+    }
+
+
 }

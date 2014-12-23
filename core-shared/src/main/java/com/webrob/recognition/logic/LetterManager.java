@@ -91,10 +91,6 @@ public class LetterManager
 	return RecognitionHelper.calculateEuclideanDistance(gravityPoint1, gravityPoint2);
     }
 
-
-
-
-
     private double calculateDistanceFromStraight()
     {
 	Point mainLetterPoint = letterToCheckLocation.getGravityPoint();
@@ -109,7 +105,4 @@ public class LetterManager
 	return Math.abs(-a * mainLetterPoint.y + mainLetterPoint.x - b) /
 			Math.sqrt(Math.pow(a, 2) + Math.pow(b, 2));
     }
-
-
-
 }

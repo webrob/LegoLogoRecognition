@@ -11,5 +11,4 @@ public class GlobalDef
     public static final double[] RED_COLOR = new double[] { 0, 0, 255 };
     public static final int MIN_SEGMENT_AREA = 20;
     public static final double[] SEGMENT_START_COLOR = new double[] { 10, 0, 0 };
-
 }
