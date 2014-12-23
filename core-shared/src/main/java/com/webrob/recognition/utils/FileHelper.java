@@ -7,8 +7,8 @@ public class FileHelper
 {
     public static String getFilePathToSave(String originalFilePath)
     {
-	int lastIndexOf = originalFilePath.lastIndexOf("/");
+	int lastIndexOf = originalFilePath.lastIndexOf("\\");
 
-	return originalFilePath.substring(0, lastIndexOf);
+	return originalFilePath.substring(0, lastIndexOf + 1);
     }
 }

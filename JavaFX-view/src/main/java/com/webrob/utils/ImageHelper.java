@@ -1,42 +1,76 @@
 package com.webrob.utils;
 
-
+import com.webrob.logic.ProcessedStagesImagesListener;
+import com.webrob.recognition.domain.ProcessedStagesPaths;
+import com.webrob.recognition.logic.ImageProcessingListener;
+import com.webrob.recognition.logic.LegoRecognition;
 import com.webrob.recognition.logic.LegoRecognitionImpl;
 import javafx.scene.image.Image;
-import org.opencv.core.Mat;
-import org.opencv.core.MatOfByte;
-import org.opencv.highgui.Highgui;
 
-import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by Robert on 2014-12-21.
  */
-public class ImageHelper
+public class ImageHelper implements ImageProcessingListener
 {
-    private LegoRecognitionImpl legoRecognition = new LegoRecognitionImpl();
+    public static final String URL_FILE_PREFIX = "file:///";
+    private File file;
+    private LegoRecognition legoRecognition;
+    private List<ProcessedStagesImagesListener> listeners = new ArrayList<>();
 
-    private Image matToImage(Mat input)
+    public ImageHelper(File file)
     {
-	MatOfByte buf = new MatOfByte();
-	Highgui.imencode(".jpg", input, buf);
-	return new Image(new ByteArrayInputStream(buf.toArray()));
+	this.file = file;
+	legoRecognition = new LegoRecognitionImpl(file.getAbsolutePath());
+        legoRecognition.addListeners(this);
     }
 
-    public Image getOriginalImage(String nameWithExt)
+    public void addListener(ProcessedStagesImagesListener listener)
     {
-	Mat originalMat = legoRecognition.getOriginalImage(nameWithExt);
-	return matToImage(originalMat);
+        listeners.add(listener);
     }
 
-    public Image getNewImage()
+    public Image getImageFromFile()
     {
-	//Mat newMat = legoReconition.getNewImage();
-	//Image newImage = ImageHelper.matToImage(newMat);
-
-	String newImagePath = legoRecognition.getNewImagePath();
-	return new Image("file:///" +newImagePath);
+	return getImageFromPath(file.getAbsolutePath());
     }
 
+    public void recognizeLego()
+    {
+        Thread thread = new Thread(legoRecognition);
+        thread.start();
 
+    }
+
+    public static Image getImageFromPath(String path)
+    {
+	return new Image(URL_FILE_PREFIX + path);
+    }
+
+    @Override
+    public void imageProcessingHasFinished(ProcessedStagesPaths stagesPaths)
+    {
+	ProcessedStagesImages stagesImages = new ProcessedStagesImages();
+	String blackAndWhiteSegmentationPath = stagesPaths.getBlackAndWhiteSegmentationPath();
+	stagesImages.setBlackAndWhiteSegmentationImage(getImageFromPath(blackAndWhiteSegmentationPath));
+
+	String markedLegoWithRedBackgroundPath = stagesPaths.getMarkedLegoWithRedBackgroundSamplingPath();
+	stagesImages.setMarkedLegoWithRedBackgroundSamplingImage(getImageFromPath(markedLegoWithRedBackgroundPath));
+
+	String originalImageWithMarkedLegoPath = stagesPaths.getOriginalImageWithMarkedLegoPath();
+	stagesImages.setOriginalImageWithMarkedLegoImage(getImageFromPath(originalImageWithMarkedLegoPath));
+
+        notifiyAllListeners(stagesImages);
+    }
+
+    private void notifiyAllListeners(ProcessedStagesImages stagesImages)
+    {
+        for(ProcessedStagesImagesListener listener : listeners)
+        {
+            listener.processedStageImagesAreReady(stagesImages);
+        }
+    }
 }
