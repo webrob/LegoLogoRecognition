@@ -7,7 +7,7 @@ public class ProcessedStagesPaths
 {
     private String blackAndWhiteSegmentationPath;
     private String markedLegoWithRedBackgroundSamplingPath;
-    private String originalImageWithMarkedPath;
+    private String originalImageWithMarkedLegoPath;
 
     public String getBlackAndWhiteSegmentationPath()
     {
@@ -31,11 +31,11 @@ public class ProcessedStagesPaths
 
     public String getOriginalImageWithMarkedLegoPath()
     {
-	return originalImageWithMarkedPath;
+	return originalImageWithMarkedLegoPath;
     }
 
-    public void setOriginalImageWithMarkedPath(String originalImageWithMarkedPath)
+    public void setOriginalImageWithMarkedLegoPath(String originalImageWithMarkedLegoPath)
     {
-	this.originalImageWithMarkedPath = originalImageWithMarkedPath;
+	this.originalImageWithMarkedLegoPath = originalImageWithMarkedLegoPath;
     }
 }

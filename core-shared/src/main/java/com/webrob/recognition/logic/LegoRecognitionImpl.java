@@ -7,6 +7,7 @@ import com.webrob.recognition.domain.ProcessedStagesPaths;
 import com.webrob.recognition.domain.Segment;
 import com.webrob.recognition.utils.FileHelper;
 import org.opencv.core.Mat;
+import org.opencv.core.Rect;
 import org.opencv.highgui.Highgui;
 
 import java.util.List;
@@ -40,7 +41,7 @@ public class LegoRecognitionImpl implements LegoRecognition
 
 	Segmentation segmentation = new Segmentation(processingImage);
 	segmentation.segmentToBlackAndWhite();
-	String blackAndWhitePath = saveImage("blackAndWhite.jpg", processingImage);
+	String blackAndWhitePath = saveImage("1-blackAndWhite.jpg", processingImage);
 	stagesPaths.setBlackAndWhiteSegmentationPath(blackAndWhitePath);
 
 	RegionGrow regionGrow = new RegionGrow(processingImage);
@@ -50,21 +51,26 @@ public class LegoRecognitionImpl implements LegoRecognition
 	Multimap<Letter, Segment> recognizedLetters = calculator.calculateForEachSegmentMomentum(regionFounds);
 
 	LegoFinder legoFinder = new LegoFinder();
-	List<Lego> legoLogoList = legoFinder.findLegoLogos(recognizedLetters);
+	List<Lego> legoLogosOnAnyBackgroundColor = legoFinder.findLegoLogos(recognizedLetters);
 
 
 	RedBackgroundVerifier backgroundVerifier = new RedBackgroundVerifier(originalImage, processingImage);
-	for (Lego lego : legoLogoList)
+	for (Lego lego : legoLogosOnAnyBackgroundColor)
 	{
 	    boolean pointsOnRedBackground = backgroundVerifier.drawPoints(lego.getPointsAbove(), lego.getPointsUnder());
 	    if (pointsOnRedBackground)
 	    {
-		backgroundVerifier.drawFoundLogoFrame(lego.getBoundingRect());
+		Rect boundingRect = lego.getBoundingRect();
+		backgroundVerifier.drawFoundLogoFrameOnOriginalImage(boundingRect);
+		backgroundVerifier.drawFoundLogoFrameOnProcessingImage(boundingRect);
 	    }
 	}
 
-	String markedLegoWithRedBackgroundSamplingPath = saveImage("markedLegoWithRedBackgroundSampling.jpg", processingImage);
+	String markedLegoWithRedBackgroundSamplingPath = saveImage("2-markedLegoWithRedBackgroundSampling.jpg", processingImage);
 	stagesPaths.setMarkedLegoWithRedBackgroundSamplingPath(markedLegoWithRedBackgroundSamplingPath);
+
+	String originalImageWithMarkedLegoPath = saveImage("3-originalImageWithMarkedLego.jpg", originalImage);
+	stagesPaths.setOriginalImageWithMarkedLegoPath(originalImageWithMarkedLegoPath);
 
 	return stagesPaths;
     }
