@@ -1,0 +1,600 @@
+package com.webrob.recognition.logic;
+
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
+import com.webrob.recognition.domain.Lego;
+import com.webrob.recognition.domain.Letter;
+import com.webrob.recognition.domain.Segment;
+import com.webrob.recognition.utils.RecognitionHelper;
+import org.opencv.core.*;
+import org.opencv.highgui.Highgui;
+
+import java.awt.Point;
+import java.util.*;
+import java.util.List;
+
+/**
+ * Created by Robert on 2014-12-21.
+ */
+public class LegoRecognitionImpl implements LegoRecognition
+{
+    static
+    {
+	System.loadLibrary(org.opencv.core.Core.NATIVE_LIBRARY_NAME);
+    }
+
+    public static final int MIN_SEGMENT_AREA = 20;
+    public static final int GRAY_SEGMENTATION_THRESHOLD = 210;
+
+    protected final String PATH_TO_ORIGINAL_IMAGE_FOLDER = "images/org/";
+    private String originalPath;
+    private Mat newImage = new Mat();
+    private String originalImageNameWithExt;
+    private Size size;
+    private final double[] WHITE_COLOR = new double[] { 255, 255, 255 };
+    private final double[] BLACK_COLOR = new double[] { 0, 0, 0 };
+    private final double[] GREEN_COLOR = new double[] { 0, 255, 0 };
+    private final double[] RED_COLOR = new double[] { 0, 0, 255 };
+    private final double[] SEGMENT_START_COLOR = new double[] { 10, 0, 0 };
+    private Multimap<Letter, Segment> recognizedLetters = HashMultimap.create();
+    private Mat originalImage;
+
+
+    public LegoRecognitionImpl()
+    {
+
+    }
+
+    public LegoRecognitionImpl(String filePath)
+    {
+
+    }
+
+
+    public Mat getOriginalImage(String nameWithExtension)
+    {
+	originalPath = getClass().getResource("/" + PATH_TO_ORIGINAL_IMAGE_FOLDER + nameWithExtension).getPath();
+	originalPath = originalPath.substring(1, originalPath.length());
+	originalImage = Highgui.imread(originalPath);
+	originalImage.copyTo(newImage);
+	originalImageNameWithExt = nameWithExtension;
+	size = originalImage.size();
+	return originalImage;
+    }
+
+    public Mat getNewImage()
+    {
+	saveImage();
+	return newImage;
+    }
+
+    public String getNewImagePath()
+    {
+	return saveImage();
+    }
+
+    private String saveImage()
+    {
+	String pathToWrite = originalPath.replace("org/" + originalImageNameWithExt, "tmp/test.jpg");
+
+	//changeContrast(50);
+	//convertImageToGray();
+
+
+	segmentToBlackAndWhite();
+	calculateForEachSegmentMomentum();
+
+	//recognizeLetters();
+	checkCorrectLettersOrder();
+	//isLogoOnRedBackground();
+	//markFoundLogos();
+
+	Highgui.imwrite(pathToWrite, newImage);
+	return pathToWrite;
+    }
+
+    private void convertImageToGray()
+    {
+	for (int x = 0; x < size.width; x++)
+	{
+	    for (int y = 0; y < size.height; y++)
+	    {
+		double[] pixel = newImage.get(x, y);
+		pixel = convertPixelToGray(pixel);
+		newImage.put(x, y, pixel);
+	    }
+	}
+    }
+
+    private double calculateGrayValue(double[] pixel)
+    {
+	double gray = 0;
+	for (double componentRGB : pixel)
+	{
+	    gray += componentRGB;
+	}
+	gray /= pixel.length;
+	return gray;
+    }
+
+    private double[] convertPixelToGray(double[] pixel)
+    {
+	double gray = calculateGrayValue(pixel);
+	for (int i = 0; i < pixel.length; i++)
+	{
+	    pixel[i] = gray;
+	}
+	return pixel;
+    }
+
+    private void changeContrast(int contrast)
+    {
+	for (int x = 0; x < size.height; x++)
+	{
+	    for (int y = 0; y < size.width; y++)
+	    {
+		double factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+		double[] pixel = newImage.get(x, y);
+
+		for (int i = 0; i < pixel.length; i++)
+		{
+		    pixel[i] = factor * (pixel[i] - 128) + 128;
+
+		    if (pixel[i] > 255)
+		    {
+			pixel[i] = 255;
+		    }
+		    else if (pixel[i] < 0)
+		    {
+			pixel[i] = 0;
+		    }
+		}
+		newImage.put(x, y, pixel);
+
+	    }
+	}
+    }
+
+    private void changePixelColor(double[] pixel, double[] color)
+    {
+	System.arraycopy(color, 0, pixel, 0, pixel.length);
+    }
+
+    private void segmentToBlackAndWhite()
+    {
+	for (int x = 0; x < size.height; x++)
+	{
+	    for (int y = 0; y < size.width; y++)
+	    {
+		double[] pixel = newImage.get(x, y);
+		double gray = calculateGrayValue(pixel);
+		if (gray > GRAY_SEGMENTATION_THRESHOLD)
+		{
+		    changePixelColor(pixel, WHITE_COLOR);
+		}
+		else
+		{
+		    changePixelColor(pixel, BLACK_COLOR);
+		}
+		newImage.put(x, y, pixel);
+	    }
+	}
+    }
+
+    private int regionGrowForEachSegment()
+    {
+	int segmentsFound = 0;
+
+	for (int x = 0; x < size.height; x++)
+	{
+	    newImage.put(x, 0, BLACK_COLOR);
+	}
+	for (int y = 0; y < size.width; y++)
+	{
+	    newImage.put(0, y, BLACK_COLOR);
+	}
+
+	double[] nextSegmentColor = SEGMENT_START_COLOR.clone();
+	for (int x = 1; x < size.height; x += 4)
+	{
+	    for (int y = 1; y < size.width; y += 4)
+	    {
+		double[] pixel = newImage.get(x, y);
+		if (RecognitionHelper.isPixelColor(pixel, WHITE_COLOR))
+		{
+		    Point point = new Point(x, y);
+		    regionGrow(point, nextSegmentColor);
+		    nextSegmentColor = getNextSegmentColor(nextSegmentColor);
+		    segmentsFound++;
+		    //System.out.println(segmentsFound);
+		    //System.out.println(nextSegmentColor[0] + " "+ nextSegmentColor[1] +  " "+ nextSegmentColor[2]);
+		}
+	    }
+	}
+	return segmentsFound;
+    }
+
+    private void regionGrow(Point point, double[] currentSegmentColor)
+    {
+	Set<Point> allPoints = new HashSet<>();
+	allPoints.add(point);
+
+	while (!allPoints.isEmpty())
+	{
+	    Point p = allPoints.iterator().next();
+	    int x = p.x;
+	    int y = p.y;
+	    allPoints.remove(p);
+	    newImage.put(x, y, currentSegmentColor);
+
+	    if (y > 0)
+	    {
+		double[] topPoint = newImage.get(x, y - 1);
+		if (isPixelNotCheckedYetAndIsNotBlack(topPoint, currentSegmentColor))
+		{
+		    allPoints.add(new Point(x, y - 1));
+		}
+	    }
+	    if (x > 0)
+	    {
+		double[] leftPoint = newImage.get(x - 1, y);
+		if (isPixelNotCheckedYetAndIsNotBlack(leftPoint, currentSegmentColor))
+		{
+		    allPoints.add(new Point(x - 1, y));
+		}
+	    }
+	    if (y < size.width - 1)
+	    {
+		double[] bottomPoint = newImage.get(x, y + 1);
+		if (isPixelNotCheckedYetAndIsNotBlack(bottomPoint, currentSegmentColor))
+		{
+		    allPoints.add(new Point(x, y + 1));
+		}
+	    }
+	    if (x < size.height - 1)
+	    {
+		double[] rightPoint = newImage.get(x + 1, y);
+		if (isPixelNotCheckedYetAndIsNotBlack(rightPoint, currentSegmentColor))
+		{
+		    allPoints.add(new Point(x + 1, y));
+		}
+	    }
+	}
+    }
+
+    private boolean isPixelNotCheckedYetAndIsNotBlack(double[] pixel, double[] color)
+    {
+	return !RecognitionHelper.isPixelColor(pixel, color) &&
+			!RecognitionHelper.isPixelColor(pixel, BLACK_COLOR);
+    }
+
+    private double[] getNextSegmentColor(double[] color)
+    {
+	//color[1]+=70;
+
+	Double b = color[0];
+	Double g = color[1];
+	Double r = color[2];
+
+	if (b.intValue() < 255)
+	{
+	    color[0]++;
+	}
+	else if (g.intValue() < 255)
+	{
+	    color[1]++;
+	}
+	else if (r.intValue() < 255)
+	{
+	    color[2]++;
+	}
+	return color;
+
+    }
+
+    private void calculateForEachSegmentMomentum()
+    {
+	int regionFounds = regionGrowForEachSegment();
+
+	double[] currentSegmentColor = SEGMENT_START_COLOR.clone();
+
+	for (int i = 0; i < regionFounds; i++)
+	{
+	    Rect rect = calculateBoundingRectForColor(currentSegmentColor);
+	    double area = mpq(rect, currentSegmentColor, 0, 0);
+
+	    if (area > MIN_SEGMENT_AREA)
+	    {
+		double ax = mpq(rect, currentSegmentColor, 1, 0) / area;
+		double ay = mpq(rect, currentSegmentColor, 0, 1) / area;
+		org.opencv.core.Point gravityPoint = new org.opencv.core.Point(ax, ay);
+		MomentumCalculator cal = new MomentumCalculator(newImage, rect, currentSegmentColor, gravityPoint,
+				area);
+
+		double[] NM = calculateMomentumsForColor(cal);
+		for (int z = 1; z < 11; z++)
+		{
+		    System.out.println("M " + z + " = " + NM[z]);
+		}
+
+		recognizeLetters(NM, rect, gravityPoint);
+
+		//System.out.println("region " + i + " " + currentSegmentColor[0] + " " + currentSegmentColor[1] + " "
+				//+ currentSegmentColor[2]);
+	    }
+
+	    currentSegmentColor = getNextSegmentColor(currentSegmentColor);
+	}
+
+    }
+
+    private double mpq(Rect boundingRect, double[] color, int p, int q)
+    {
+	double result = 0;
+
+	for (int x = boundingRect.x; x < boundingRect.x + boundingRect.height; x++)
+	{
+	    for (int y = boundingRect.y; y < boundingRect.y + boundingRect.width; y++)
+	    {
+		double[] pixel = newImage.get(x, y);
+		result += Math.pow(x, p) * Math.pow(y, q) *
+				(RecognitionHelper.isPixelColor(pixel, color) ? 1 : 0);
+	    }
+	}
+
+	return result;
+    }
+
+    private double[] calculateMomentumsForColor(MomentumCalculator cal)
+    {
+	double[] NM = new double[11];
+
+	NM[1] = cal.N(2, 0) + cal.N(0, 2);
+
+	NM[2] = Math.pow(cal.N(2, 0) - cal.N(0, 2), 2) + 4 * Math.pow(cal.N(1, 1), 2);
+
+	NM[3] = Math.pow(cal.N(3, 0) - 3 * cal.N(1, 2), 2) + Math.pow(3 * cal.N(2, 1) - cal.N(0, 3), 2);
+
+	NM[4] = Math.pow(cal.N(3, 0) + cal.N(1, 2), 2) + Math.pow(cal.N(2, 1) + cal.N(0, 3), 2);
+
+	NM[5] = (cal.N(3, 0) - 3 * cal.N(1, 2)) * (cal.N(3, 0) + cal.N(1, 2)) *
+			(Math.pow(cal.N(3, 0) + cal.N(1, 2), 2) - 3 * Math.pow(cal.N(2, 1) + cal.N(0, 3), 2))
+			+ (3 * cal.N(2, 1) - cal.N(0, 3)) * (cal.N(2, 1) + cal.N(0, 3)) *
+			(3 * Math.pow(cal.N(3, 0) + cal.N(1, 2), 2) - Math.pow(cal.N(2, 1) + cal.N(0, 3), 2));
+
+	NM[6] = (cal.N(2, 0) - cal.N(0, 2)) * (Math.pow(cal.N(3, 0) + cal.N(1, 2), 2) - Math.pow(cal.N(2, 1) +
+			cal.N(0, 3), 2)) + 4 * cal.N(1, 1) * (cal.N(3, 0) + cal.N(1, 2)) * (cal.N(2, 1) +
+			cal.N(0, 3));
+
+	NM[7] = cal.N(2, 0) * cal.N(0, 2) + Math.pow(cal.N(1, 1), 2);
+
+	NM[8] = cal.N(3, 0) * cal.N(1, 2) + cal.N(2, 1) * cal.N(0, 3) - Math.pow(cal.N(1, 2), 2) - Math
+			.pow(cal.N(2, 1), 2);
+
+	NM[9] = cal.N(2, 0) * (cal.N(2, 1) * cal.N(0, 3) - Math.pow(cal.N(1, 2), 2)) + cal.N(0, 2) *
+			(cal.N(3, 0) * cal.N(1, 2) - Math.pow(cal.N(2, 1), 2)) - cal.N(1, 1) *
+			(cal.N(3, 0) * cal.N(0, 3) - cal.N(2, 1) * cal.N(1, 2));
+
+	NM[10] = Math.pow(cal.N(3, 0) * cal.N(0, 3) - cal.N(1, 2) * cal.N(2, 1), 2) -
+			4 * (cal.N(3, 0) * cal.N(1, 2) - Math.pow(cal.N(2, 1), 2)) *
+					(cal.N(0, 3) * cal.N(2, 1) - cal.N(1, 2));
+	return NM;
+    }
+
+    private Rect calculateBoundingRectForColor(double[] color)
+    {
+	int x2 = 0;
+	int y2 = 0;
+	int x1 = (int) size.height - 1;
+	int y1 = (int) size.width - 1;
+
+	for (int x = 0; x < size.height; x++)
+	{
+	    for (int y = 0; y < size.width; y++)
+	    {
+		double[] pixel = newImage.get(x, y);
+		if (RecognitionHelper.isPixelColor(pixel, color))
+		{
+		    if (x < x1)
+		    {
+			x1 = x;
+		    }
+		    else if (x > x2)
+		    {
+			x2 = x;
+		    }
+
+		    if (y < y1)
+		    {
+			y1 = y;
+		    }
+		    else if (y > y2)
+		    {
+			y2 = y;
+		    }
+		}
+
+	    }
+	}
+	//System.out.println(x1 + " " + y1 + " " + x2 + " " + y2);
+
+	return new Rect(x1, y1, y2 - y1, x2 - x1);
+    }
+
+    private void recognizeLetters(double[] NM, Rect rect, org.opencv.core.Point gravityPoint)
+    {
+	Letter letter = LetterManager.recognizeLetter(NM);
+	Segment segment = new Segment(rect, gravityPoint);
+	System.out.println(letter + " " + rect);
+	recognizedLetters.put(letter, segment);
+    }
+
+    private void checkCorrectLettersOrder()
+    {
+	Collection<Segment> allSegmentsL = recognizedLetters.get(Letter.L);
+	Collection<Segment> allSegmentsE = recognizedLetters.get(Letter.E);
+	Collection<Segment> allSegmentsG = recognizedLetters.get(Letter.G);
+	Collection<Segment> allSegmentsO = recognizedLetters.get(Letter.O);
+
+	for (Segment segmentL : allSegmentsL)
+	{
+	    for (Segment segmentO : allSegmentsO)
+	    {
+		LetterManager letterManager = new LetterManager(segmentL, segmentO);
+
+		for (Segment segmentE : allSegmentsE)
+		{
+		    letterManager.setLetterToCheckLocation(segmentE);
+		    letterManager.setLetterBefore(segmentL);
+		    letterManager.setLetterAfter(segmentO);
+
+		    //System.out.println(letterManager.isLetterBetween());
+
+		    if (letterManager.isLetterBetween())
+		    {
+			boolean isLNearE = letterManager.areLettersNearEachOther();
+			//System.out.println(isLNearE);
+			if (isLNearE)
+			{
+			    for (Segment segmentG : allSegmentsG)
+			    {
+				letterManager.setLetterToCheckLocation(segmentG);
+				letterManager.setLetterBefore(segmentE);
+				letterManager.setLetterAfter(segmentO);
+
+				//System.out.println(letterManager.isLetterBetween());
+
+				if (letterManager.isLetterBetween())
+				{
+				    boolean isENearG = letterManager.areLettersNearEachOther();
+				    if (isENearG)
+				    {
+
+					letterManager.setLetterToCheckLocation(segmentO);
+					letterManager.setLetterBefore(segmentG);
+
+					boolean isGNearO = letterManager.areLettersNearEachOther();
+					if (isGNearO)
+					{
+					    Rect boundingRect = segmentL.getBoundingRect();
+
+					    Lego lego = new Lego(segmentL, segmentE, segmentG, segmentO);
+					    System.out.println("LEGO!!!!!!!!!!!!!!!!!!!!!!!!!!" + boundingRect +
+							    segmentE.getBoundingRect() + " " + segmentG
+							    .getBoundingRect() + " " + segmentO.getBoundingRect());
+
+					    Rect boundingBox = lego.getBoundingRect();
+
+					    List<org.opencv.core.Point> pointsAbove = letterManager
+							    .calculatePointsAbove(lego);
+
+					    List<org.opencv.core.Point> pointsUnder = letterManager
+							    .calculatePointsUnder(lego);
+
+					    boolean pointsOnRedBackground = drawPoints(pointsAbove, pointsUnder);
+
+					    if (pointsOnRedBackground)
+					    {
+						drawFoundLogoFrame(boundingBox);
+					    }
+					}
+				    }
+
+				}
+			    }
+			}
+		    }
+
+		}
+
+	    }
+
+	}
+    }
+
+
+    private boolean drawPoints(List<org.opencv.core.Point> pointsAbove, List<org.opencv.core.Point> pointsUnder)
+    {
+	System.out.println(pointsAbove.size() + " " + pointsUnder.size());
+
+	int numberRedPixelsAbove = 0;
+	int numberRedPixelsUnder = 0;
+
+	for (org.opencv.core.Point point : pointsAbove)
+	{
+	    int x = (int)point.x;
+	    int y = (int)point.y;
+	    if (x > 0 && y > 0)
+	    {
+		System.out.println(point);
+		newImage.put(x, y, RED_COLOR);
+		newImage.put(x + 1, y, RED_COLOR);
+		newImage.put(x, y + 1, RED_COLOR);
+		newImage.put(x + 1, y + 1, RED_COLOR);
+
+		double[] pixel = originalImage.get(x, y);
+		if (pixel != null)
+		{
+		    if (isColorSimilarToRed(pixel))
+		    {
+			numberRedPixelsAbove++;
+		    }
+		}
+	    }
+	}
+
+
+	for (org.opencv.core.Point point : pointsUnder)
+	{
+	    int x = (int)point.x;
+	    int y = (int)point.y;
+	    System.out.println(point);
+	    if (x > 0 && y > 0)
+	    {
+		newImage.put(x, y, RED_COLOR);
+		newImage.put(x + 1, y, RED_COLOR);
+		newImage.put(x, y + 1, RED_COLOR);
+		newImage.put(x + 1, y + 1, RED_COLOR);
+
+		double[] pixel = originalImage.get(x, y);
+		if (pixel != null)
+		{
+		    if (isColorSimilarToRed(pixel))
+		    {
+			numberRedPixelsUnder++;
+		    }
+		}
+	    }
+	}
+
+	System.out.println(numberRedPixelsAbove + " " + numberRedPixelsUnder);
+
+	return numberRedPixelsAbove >= 2 && numberRedPixelsUnder >= 2;
+
+    }
+
+    private void drawFoundLogoFrame(Rect rect)
+    {
+	System.out.println(rect);
+	for (int x = rect.x; x < rect.x + rect.height ; x++)
+	{
+	    newImage.put(x, rect.y, GREEN_COLOR);
+	    newImage.put(x, rect.y-1, GREEN_COLOR);
+	    newImage.put(x, rect.y + rect.width, GREEN_COLOR);
+	    newImage.put(x, rect.y + rect.width + 1, GREEN_COLOR);
+	}
+
+	for (int y = rect.y; y < rect.y + rect.width ; y++)
+	{
+	    newImage.put(rect.x, y, GREEN_COLOR);
+	    newImage.put(rect.x-1, y, GREEN_COLOR);
+	    newImage.put(rect.x + rect.height, y, GREEN_COLOR);
+	    newImage.put(rect.x + rect.height + 1, y, GREEN_COLOR);
+	}
+    }
+    private boolean isColorSimilarToRed(double[] color)
+    {
+	return (color[0] < 80 && color[1] < 80 && color[2] > 180);
+    }
+
+}

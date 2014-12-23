@@ -28,7 +28,7 @@ public class MainWindowController implements Initializable
 
     private void setOriginalImage()
     {
-        Image originalImage = imageHelper.getOriginalImage("logo.jpg");
+        Image originalImage = imageHelper.getOriginalImage("lego1-test1.jpg");
         orgImageView.setImage(originalImage);
     }
 
