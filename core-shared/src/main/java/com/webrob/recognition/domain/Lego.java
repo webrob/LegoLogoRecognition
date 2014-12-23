@@ -1,8 +1,6 @@
-package com.webrob.model;
+package com.webrob.recognition.domain;
 
 import org.opencv.core.Rect;
-
-import java.awt.*;
 
 /**
  * Created by Robert on 2014-12-22.

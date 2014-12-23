@@ -1,7 +1,7 @@
 package com.webrob.utils;
 
 
-import com.webrob.model.LegoRecognition;
+import com.webrob.recognition.logic.LegoRecognitionImpl;
 import javafx.scene.image.Image;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
@@ -14,7 +14,7 @@ import java.io.ByteArrayInputStream;
  */
 public class ImageHelper
 {
-    private LegoRecognition legoRecognition = new LegoRecognition();
+    private LegoRecognitionImpl legoRecognition = new LegoRecognitionImpl();
 
     private Image matToImage(Mat input)
     {

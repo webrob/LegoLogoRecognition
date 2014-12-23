@@ -1,4 +1,4 @@
-package com.webrob.model;
+package com.webrob.recognition.domain;
 
 import org.opencv.core.Point;
 import org.opencv.core.Rect;

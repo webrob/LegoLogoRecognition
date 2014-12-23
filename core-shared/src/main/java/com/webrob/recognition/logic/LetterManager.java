@@ -1,5 +1,9 @@
-package com.webrob.model;
+package com.webrob.recognition.logic;
 
+import com.webrob.recognition.domain.Direction;
+import com.webrob.recognition.domain.Lego;
+import com.webrob.recognition.domain.Letter;
+import com.webrob.recognition.domain.Segment;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 

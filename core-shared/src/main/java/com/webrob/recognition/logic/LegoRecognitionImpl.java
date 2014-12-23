@@ -1,7 +1,11 @@
-package com.webrob.model;
+package com.webrob.recognition.logic;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import com.webrob.recognition.domain.Lego;
+import com.webrob.recognition.domain.Letter;
+import com.webrob.recognition.domain.Segment;
+import com.webrob.recognition.utils.RecognitionHelper;
 import org.opencv.core.*;
 import org.opencv.highgui.Highgui;
 
@@ -12,7 +16,7 @@ import java.util.List;
 /**
  * Created by Robert on 2014-12-21.
  */
-public class LegoRecognition
+public class LegoRecognitionImpl implements LegoRecognition
 {
     static
     {
@@ -34,6 +38,18 @@ public class LegoRecognition
     private final double[] SEGMENT_START_COLOR = new double[] { 10, 0, 0 };
     private Multimap<Letter, Segment> recognizedLetters = HashMultimap.create();
     private Mat originalImage;
+
+
+    public LegoRecognitionImpl()
+    {
+
+    }
+
+    public LegoRecognitionImpl(String filePath)
+    {
+
+    }
+
 
     public Mat getOriginalImage(String nameWithExtension)
     {

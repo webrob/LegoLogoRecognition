@@ -1,5 +1,6 @@
-package com.webrob.model;
+package com.webrob.recognition.logic;
 
+import com.webrob.recognition.utils.RecognitionHelper;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;

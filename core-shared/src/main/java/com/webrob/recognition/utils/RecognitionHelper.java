@@ -1,4 +1,4 @@
-package com.webrob.model;
+package com.webrob.recognition.utils;
 
 /**
  * Created by Robert on 2014-12-22.
