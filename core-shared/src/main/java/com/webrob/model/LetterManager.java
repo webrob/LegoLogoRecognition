@@ -13,8 +13,7 @@ public class LetterManager
     private Segment letterToCheckLocation;
     private Segment letterBefore;
     private Segment letterAfter;
-    private Direction direction = Direction.NotDetermined;
-
+    private Direction direction;
 
     public LetterManager(Segment firstSegment, Segment lastSegment)
     {
@@ -30,10 +29,9 @@ public class LetterManager
 	}
 	else
 	{
-	    direction = Direction.Right;
+	    direction = Direction.Left;
 	}
     }
-
 
     public void setLetterToCheckLocation(Segment letterToCheckLocation)
     {
@@ -50,12 +48,11 @@ public class LetterManager
 	this.letterAfter = letterAfter;
     }
 
-
     public static Letter recognizeLetter(double[] NM)
     {
 	Letter letter = Letter.NOT_FOUND;
 
-	if ((NM[1] > 0.3 && NM[1] < 0.37) && (NM[6] > 0.03 && NM[6] < 0.37))
+	if ((NM[1] > 0.3 && NM[1] < 0.37) && (NM[6] > 0.0255 && NM[6] < 0.37))
 	{
 	    letter = Letter.L;
 	}
@@ -79,12 +76,22 @@ public class LetterManager
 	return letter;
     }
 
-
     public boolean isLetterBetween()
     {
 	Point mainLetterPoint = letterToCheckLocation.getGravityPoint();
-	Point letterBeforePoint = letterBefore.getGravityPoint();
-	Point letterAfterPoint = letterAfter.getGravityPoint();
+	Point letterBeforePoint;
+	Point letterAfterPoint;
+
+	if (direction == Direction.Right)
+	{
+	    letterBeforePoint = letterBefore.getGravityPoint();
+	    letterAfterPoint = letterAfter.getGravityPoint();
+	}
+	else
+	{
+	    letterBeforePoint = letterAfter.getGravityPoint();
+	    letterAfterPoint = letterBefore.getGravityPoint();
+	}
 	boolean isLetterBetween;
 
 	if (mainLetterPoint.y <= letterBeforePoint.y || mainLetterPoint.y >= letterAfterPoint.y)
@@ -101,25 +108,59 @@ public class LetterManager
 
     public boolean areLettersNearEachOther()
     {
+	Rect firstRect = letterBefore.getBoundingRect();
+
+	double diagonalFirstRect = calculateRectDiagonal(firstRect);
+	double gravityCenterDistance = caculateGravityCenterDistance();
+
+	return gravityCenterDistance < diagonalFirstRect;
+    }
+
+
+    private double caculateGravityCenterDistance()
+    {
+	Point gravityPoint1 = letterBefore.getGravityPoint();
+	Point gravityPoint2 = letterToCheckLocation.getGravityPoint();
+
+	return calculateEuclideanDistance(gravityPoint1, gravityPoint2);
+    }
+
+    private double calculateRectDiagonal(Rect rect)
+    {
+	Point firstPoint = rect.br();
+	Point lastPoint = rect.tl();
+
+	return calculateEuclideanDistance(firstPoint, lastPoint);
+    }
+
+    private double calculateEuclideanDistance(Point p1, Point p2)
+    {
+	return Math.sqrt(Math.pow(p1.x-p2.x,2) +Math.pow(p1.y-p2.y,2));
+    }
+
+    /*
+    public boolean areLettersNearEachOther()
+    {
 	Rect firstRect;
 	Rect secondRect;
 
-	 if (direction == Direction.Right)
-	 {
-	     firstRect = letterBefore.getBoundingRect();
-	     secondRect = letterToCheckLocation.getBoundingRect();
-	 }
+	if (direction == Direction.Right)
+	{
+	    firstRect = letterBefore.getBoundingRect();
+	    secondRect = letterToCheckLocation.getBoundingRect();
+	}
 	else
-	 {
-	     firstRect = letterToCheckLocation.getBoundingRect();
-	     secondRect = letterBefore.getBoundingRect();
-	 }
+	{
+	    firstRect = letterToCheckLocation.getBoundingRect();
+	    secondRect = letterBefore.getBoundingRect();
+	}
 
-	double distance = (firstRect.width + secondRect.width /2.0f) /2.0f;
+	double distance = (firstRect.width + secondRect.width / 2.0f) / 2.0f;
 
 	double dist = secondRect.y - (firstRect.y + firstRect.width);
 	return dist < distance;
     }
+    */
 
     private double calculateDistanceFromStraight()
     {
@@ -132,8 +173,8 @@ public class LetterManager
 
 	double b = letterBeforePoint.x - letterBeforePoint.y * a;
 
-	return Math.abs(-a * mainLetterPoint.y + mainLetterPoint.x - b)/
-			Math.sqrt(Math.pow(a,2) + 1);
+	return Math.abs(-a * mainLetterPoint.y + mainLetterPoint.x - b) /
+			Math.sqrt(Math.pow(a, 2) + Math.pow(b, 2));
     }
 
 }

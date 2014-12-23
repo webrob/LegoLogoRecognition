@@ -32,14 +32,16 @@ public class LegoRecognition
     private Size size;
     private final double[] WHITE_COLOR = new double[] { 255, 255, 255 };
     private final double[] BLACK_COLOR = new double[] { 0, 0, 0 };
-    private final double[] SEGMENT_START_COLOR = new double[] { 50, 0, 0 };
+    private final double[] GREEN_COLOR = new double[] { 0, 255, 0 };
+    private final double[] SEGMENT_START_COLOR = new double[] { 10, 0, 0 };
     private Multimap<Letter, Segment> recognizedLetters = HashMultimap.create();
+    private Mat originalImage;
 
     public Mat getOriginalImage(String nameWithExtension)
     {
 	originalPath = getClass().getResource("/" + PATH_TO_ORIGINAL_IMAGE_FOLDER + nameWithExtension).getPath();
 	originalPath = originalPath.substring(1, originalPath.length());
-	Mat originalImage = Highgui.imread(originalPath);
+	originalImage = Highgui.imread(originalPath);
 	originalImage.copyTo(newImage);
 	originalImageNameWithExt = nameWithExtension;
 	size = originalImage.size();
@@ -68,7 +70,7 @@ public class LegoRecognition
 	calculateForEachSegmentMomentum();
 	//recognizeLetters();
 	checkCorrectLettersOrder();
-	checkRedBackground();
+	//isLogoOnRedBackground();
 	markFoundLogos();
 	Highgui.imwrite(pathToWrite, newImage);
 	return pathToWrite;
@@ -300,8 +302,8 @@ public class LegoRecognition
 
 		recognizeLetters(NM, rect, gravityPoint);
 
-		System.out.println("region " + i + " " + currentSegmentColor[0] + " " + currentSegmentColor[1] + " "
-				+ currentSegmentColor[2]);
+		//System.out.println("region " + i + " " + currentSegmentColor[0] + " " + currentSegmentColor[1] + " "
+				//+ currentSegmentColor[2]);
 	    }
 
 	    currentSegmentColor = getNextSegmentColor(currentSegmentColor);
@@ -406,7 +408,7 @@ public class LegoRecognition
     {
 	Letter letter = LetterManager.recognizeLetter(NM);
 	Segment segment = new Segment(rect, gravityPoint);
-	System.out.println(letter);
+	System.out.println(letter + " " + rect);
 	recognizedLetters.put(letter, segment);
     }
 
@@ -421,7 +423,7 @@ public class LegoRecognition
 	{
 	    for (Segment segmentO : allSegmentsO)
 	    {
-		Direction direction = Direction.Left;
+
 
 		LetterManager letterManager = new LetterManager(segmentL, segmentO);
 
@@ -436,7 +438,7 @@ public class LegoRecognition
 		    if (letterManager.isLetterBetween())
 		    {
 			boolean isLNearE = letterManager.areLettersNearEachOther();
-			System.out.println(isLNearE);
+			//System.out.println(isLNearE);
 			if (isLNearE)
 			{
 			    for (Segment segmentG : allSegmentsG)
@@ -460,9 +462,19 @@ public class LegoRecognition
 					if (isGNearO)
 					{
 					    Rect boundingRect = segmentL.getBoundingRect();
+
+					    Lego lego = new Lego(segmentL, segmentE, segmentG, segmentO);
 					    System.out.println("LEGO!!!!!!!!!!!!!!!!!!!!!!!!!!" + boundingRect +
 							    segmentE.getBoundingRect() + " " + segmentG
 							    .getBoundingRect() + " " + segmentO.getBoundingRect());
+
+					    Rect boundingBox = lego.getBoundingRect();
+
+
+					    if (isLogoOnRedBackground(boundingBox))
+					    {
+						drawFoundLogoFrame(boundingBox);
+					    }
 					}
 				    }
 
@@ -478,9 +490,53 @@ public class LegoRecognition
 	}
     }
 
-    private void checkRedBackground()
+    private void drawFoundLogoFrame(Rect rect)
     {
+	System.out.println(rect);
+	for (int x = rect.x; x < rect.x + rect.height ; x++)
+	{
+	    newImage.put(x, rect.y, GREEN_COLOR);
+	    newImage.put(x, rect.y-1, GREEN_COLOR);
+	    newImage.put(x, rect.y + rect.width, GREEN_COLOR);
+	    newImage.put(x, rect.y + rect.width + 1, GREEN_COLOR);
+	}
 
+	for (int y = rect.y; y < rect.y + rect.width ; y++)
+	{
+	    newImage.put(rect.x, y, GREEN_COLOR);
+	    newImage.put(rect.x-1, y, GREEN_COLOR);
+	    newImage.put(rect.x + rect.height, y, GREEN_COLOR);
+	    newImage.put(rect.x + rect.height + 1, y, GREEN_COLOR);
+	}
+
+
+    }
+
+    private boolean isLogoOnRedBackground(Rect rect)
+    {
+	boolean isLogoOnRedBackground = true;
+
+	int i =0;
+	for (int y = rect.y; y < rect.y + rect.width ; y+=rect.width/4)
+	{
+	    double[] pixelAbove = originalImage.get(rect.x - rect.height / 4, y);
+	    double[] pixelUnder = originalImage.get(rect.x + rect.height + rect.height/4, y);
+
+	    if (!isColorSimilarToRed(pixelAbove) || !isColorSimilarToRed(pixelUnder))
+	    {
+		//isLogoOnRedBackground = false;
+	    }
+	    i++;
+	}
+
+	System.out.println("i " + i);
+	return  isLogoOnRedBackground;
+    }
+
+
+    private boolean isColorSimilarToRed(double[] color)
+    {
+	return (color[0] < 80 && color[1] < 80 && color[2] > 180);
     }
 
     private void markFoundLogos()
