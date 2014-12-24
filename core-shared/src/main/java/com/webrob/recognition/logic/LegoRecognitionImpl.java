@@ -6,12 +6,11 @@ import com.webrob.recognition.domain.Letter;
 import com.webrob.recognition.domain.ProcessedStagesPaths;
 import com.webrob.recognition.domain.Segment;
 import com.webrob.recognition.utils.FileHelper;
+import com.webrob.recognition.utils.GlobalDef;
 import org.opencv.core.Mat;
 import org.opencv.core.Rect;
 import org.opencv.highgui.Highgui;
 
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,6 +28,7 @@ public class LegoRecognitionImpl implements LegoRecognition
     private Mat originalImage;
     private Mat processingImage = new Mat();
     private String filePathToSave;
+    private ProcessedStagesPaths stagesPaths;
 
     public LegoRecognitionImpl(String filePath)
     {
@@ -37,25 +37,57 @@ public class LegoRecognitionImpl implements LegoRecognition
 	originalImage.copyTo(processingImage);
     }
 
+
+
     @Override
     public void calculateProcessedStagePaths()
     {
-	ProcessedStagesPaths stagesPaths = new ProcessedStagesPaths();
+	stagesPaths = new ProcessedStagesPaths();
 
+	doSegmentation();
+	int regionFounds = doRegionGrow();
+	Multimap<Letter, Segment> recognizedLetters = doCalculationMomentums(regionFounds);
+	List<Lego> legoLogosOnAnyBackgroundColor = doLegoLogosFind(recognizedLetters);
+	doBackgroundColorVeryficationAndMarkLogos(legoLogosOnAnyBackgroundColor);
+
+	String markedLegoWithRedBackgroundSamplingPath = saveImage(GlobalDef.MARKED_LEGO_WITH_RED_BACKGROUND_SAMPLE_STAGE_IMAGE_NAME,
+			processingImage);
+	stagesPaths.setMarkedLegoWithRedBackgroundSamplingPath(markedLegoWithRedBackgroundSamplingPath);
+
+	String originalImageWithMarkedLegoPath = saveImage(GlobalDef.ORIGINAL_IMAGE_WITH_MARKED_LEGO__STAGE_IMAGE_NAME, originalImage);
+	stagesPaths.setOriginalImageWithMarkedLegoPath(originalImageWithMarkedLegoPath);
+
+	notifyListeners(stagesPaths);
+    }
+
+    private void doSegmentation()
+    {
 	Segmentation segmentation = new Segmentation(processingImage);
 	segmentation.segmentToBlackAndWhite();
-	String blackAndWhitePath = saveImage("1-blackAndWhite.jpg", processingImage);
+	String blackAndWhitePath = saveImage(GlobalDef.BLACK_AND_WHITE_STAGE_IMAGE_NAME, processingImage);
 	stagesPaths.setBlackAndWhiteSegmentationPath(blackAndWhitePath);
+    }
 
+    private int doRegionGrow()
+    {
 	RegionGrow regionGrow = new RegionGrow(processingImage);
-	int regionFounds = regionGrow.regionGrowForEachSegment();
+	return regionGrow.regionGrowForEachSegment();
+    }
 
+    private Multimap<Letter, Segment> doCalculationMomentums(int regionFounds)
+    {
 	MomentumAllSegmentsCalculator calculator = new MomentumAllSegmentsCalculator(processingImage);
-	Multimap<Letter, Segment> recognizedLetters = calculator.calculateForEachSegmentMomentum(regionFounds);
+	return calculator.calculateForEachSegmentMomentum(regionFounds);
+    }
 
+    private List<Lego> doLegoLogosFind(Multimap<Letter, Segment> recognizedLetters)
+    {
 	LegoFinder legoFinder = new LegoFinder();
-	List<Lego> legoLogosOnAnyBackgroundColor = legoFinder.findLegoLogos(recognizedLetters);
+	return legoFinder.findLegoLogos(recognizedLetters);
+    }
 
+    private void doBackgroundColorVeryficationAndMarkLogos(List<Lego> legoLogosOnAnyBackgroundColor )
+    {
 	RedBackgroundVerifier backgroundVerifier = new RedBackgroundVerifier(originalImage, processingImage);
 	for (Lego lego : legoLogosOnAnyBackgroundColor)
 	{
@@ -67,15 +99,6 @@ public class LegoRecognitionImpl implements LegoRecognition
 		backgroundVerifier.drawFoundLogoFrameOnProcessingImage(boundingRect);
 	    }
 	}
-
-	String markedLegoWithRedBackgroundSamplingPath = saveImage("2-markedLegoWithRedBackgroundSampling.jpg",
-			processingImage);
-	stagesPaths.setMarkedLegoWithRedBackgroundSamplingPath(markedLegoWithRedBackgroundSamplingPath);
-
-	String originalImageWithMarkedLegoPath = saveImage("3-originalImageWithMarkedLego.jpg", originalImage);
-	stagesPaths.setOriginalImageWithMarkedLegoPath(originalImageWithMarkedLegoPath);
-
-	notifyListeners(stagesPaths);
     }
 
     @Override
