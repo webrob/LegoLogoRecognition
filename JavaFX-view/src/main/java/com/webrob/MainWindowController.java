@@ -4,12 +4,14 @@ import com.webrob.logic.ProcessedStagesImagesListener;
 import com.webrob.utils.ImageHelper;
 import com.webrob.utils.ProcessedStagesImages;
 import javafx.application.Platform;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 
 import java.io.File;
 import java.net.URL;
@@ -31,6 +33,14 @@ public class MainWindowController implements Initializable, ProcessedStagesImage
     public void setStage(Stage stage)
     {
 	this.stage = stage;
+        stage.setOnCloseRequest(new EventHandler<WindowEvent>()
+        {
+            @Override public void handle(WindowEvent event)
+            {
+                Platform.exit();
+                System.exit(0);
+            }
+        });
     }
 
     @Override public void initialize(URL location, ResourceBundle resources)
