@@ -39,25 +39,26 @@ public class LetterManager
     {
 	Letter letter = Letter.NOT_FOUND;
 
-	if ((NM[1] > 0.3 && NM[1] < 0.37) && (NM[6] > 0.0255 && NM[6] < 0.37))
-	{
-	    letter = Letter.L;
-	}
-	else if ((NM[1] > 0.27 && NM[1] < 0.36) && (NM[3] > 0.23 && NM[3] < 3.6)
+
+	if ((NM[1] > 0.27 && NM[1] < 0.36) && (NM[3] > 0.23 && NM[3] < 3.6)
 			&& (NM[6] > -0.035 && NM[6] < 0.025))
 	{
 	    letter = Letter.E;
 	}
-	else if ((NM[1] > 0.25 && NM[1] < 0.35) && (NM[3] > 0.06 && NM[3] < 0.82)
-			&& (NM[4] > 0.035 && NM[4] < 0.35))
+	else if ((NM[1] > 0.25 && NM[1] < 0.35) && (NM[3] > 0.06 && NM[3] < 0.83)
+			&& (NM[4] > 0.03 && NM[4] < 0.35))
 	{
 	    letter = Letter.G;
 	}
 
-	else if ((NM[1] > 0.24 && NM[1] < 0.33) && (NM[3] > 0.0015 && NM[3] < 0.07)
+	else if ((NM[1] > 0.24 && NM[1] < 0.33) && (NM[3] > 0.0015 && NM[3] < 0.075)
 			&& (NM[6] > 0.000003 && NM[6] < 0.06))
 	{
 	    letter = Letter.O;
+	}
+	else if ((NM[1] > 0.3 && NM[1] < 0.37) && (NM[6] > 0.002 && NM[6] < 1.75))
+	{
+	    letter = Letter.L;
 	}
 
 	return letter;

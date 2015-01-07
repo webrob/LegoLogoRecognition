@@ -9,6 +9,7 @@ import com.webrob.recognition.utils.FileHelper;
 import com.webrob.recognition.utils.GlobalDef;
 import org.opencv.core.Mat;
 import org.opencv.core.Rect;
+import org.opencv.core.Size;
 import org.opencv.highgui.Highgui;
 
 import java.util.ArrayList;
@@ -34,10 +35,39 @@ public class LegoRecognitionImpl implements LegoRecognition
     {
 	filePathToSave = FileHelper.getFilePathToSave(filePath);
 	originalImage = Highgui.imread(filePath);
+
+	//changeContrast(88);
+
 	originalImage.copyTo(processingImage);
     }
 
+    private void changeContrast(int contrast)
+    {
+	Size size = originalImage.size();
+	for (int x = 0; x < size.height; x++)
+	{
+	    for (int y = 0; y < size.width; y++)
+	    {
+		double factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+		double[] pixel = originalImage.get(x, y);
 
+		for (int i = 0; i < pixel.length; i++)
+		{
+		    pixel[i] = factor * (pixel[i] - 128) + 128;
+
+		    if (pixel[i] > 255)
+		    {
+			pixel[i] = 255;
+		    }
+		    else if (pixel[i] < 0)
+		    {
+			pixel[i] = 0;
+		    }
+		}
+		originalImage.put(x, y, pixel);
+	    }
+	}
+    }
 
     @Override
     public void calculateProcessedStagePaths()
@@ -50,11 +80,13 @@ public class LegoRecognitionImpl implements LegoRecognition
 	List<Lego> legoLogosOnAnyBackgroundColor = doLegoLogosFind(recognizedLetters);
 	doBackgroundColorVeryficationAndMarkLogos(legoLogosOnAnyBackgroundColor);
 
-	String markedLegoWithRedBackgroundSamplingPath = saveImage(GlobalDef.MARKED_LEGO_WITH_RED_BACKGROUND_SAMPLE_STAGE_IMAGE_NAME,
+	String markedLegoWithRedBackgroundSamplingPath = saveImage(
+			GlobalDef.MARKED_LEGO_WITH_RED_BACKGROUND_SAMPLE_STAGE_IMAGE_NAME,
 			processingImage);
 	stagesPaths.setMarkedLegoWithRedBackgroundSamplingPath(markedLegoWithRedBackgroundSamplingPath);
 
-	String originalImageWithMarkedLegoPath = saveImage(GlobalDef.ORIGINAL_IMAGE_WITH_MARKED_LEGO__STAGE_IMAGE_NAME, originalImage);
+	String originalImageWithMarkedLegoPath = saveImage(GlobalDef.ORIGINAL_IMAGE_WITH_MARKED_LEGO__STAGE_IMAGE_NAME,
+			originalImage);
 	stagesPaths.setOriginalImageWithMarkedLegoPath(originalImageWithMarkedLegoPath);
 
 	notifyListeners(stagesPaths);
@@ -86,7 +118,7 @@ public class LegoRecognitionImpl implements LegoRecognition
 	return legoFinder.findLegoLogos(recognizedLetters);
     }
 
-    private void doBackgroundColorVeryficationAndMarkLogos(List<Lego> legoLogosOnAnyBackgroundColor )
+    private void doBackgroundColorVeryficationAndMarkLogos(List<Lego> legoLogosOnAnyBackgroundColor)
     {
 	RedBackgroundVerifier backgroundVerifier = new RedBackgroundVerifier(originalImage, processingImage);
 	for (Lego lego : legoLogosOnAnyBackgroundColor)
@@ -127,6 +159,5 @@ public class LegoRecognitionImpl implements LegoRecognition
     {
 	calculateProcessedStagePaths();
     }
-
 
 }
