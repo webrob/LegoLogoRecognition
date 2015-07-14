@@ -35,9 +35,6 @@ public class LegoRecognitionImpl implements LegoRecognition
     {
 	filePathToSave = FileHelper.getFilePathToSave(filePath);
 	originalImage = Highgui.imread(filePath);
-
-	//changeContrast(88);
-
 	originalImage.copyTo(processingImage);
     }
 
@@ -78,7 +75,7 @@ public class LegoRecognitionImpl implements LegoRecognition
 	int regionFounds = doRegionGrow();
 	Multimap<Letter, Segment> recognizedLetters = doCalculationMomentums(regionFounds);
 	List<Lego> legoLogosOnAnyBackgroundColor = doLegoLogosFind(recognizedLetters);
-	doBackgroundColorVeryficationAndMarkLogos(legoLogosOnAnyBackgroundColor);
+	doBackgroundColorVerificationAndMarkLogos(legoLogosOnAnyBackgroundColor);
 
 	String markedLegoWithRedBackgroundSamplingPath = saveImage(
 			GlobalDef.MARKED_LEGO_WITH_RED_BACKGROUND_SAMPLE_STAGE_IMAGE_NAME,
@@ -118,7 +115,7 @@ public class LegoRecognitionImpl implements LegoRecognition
 	return legoFinder.findLegoLogos(recognizedLetters);
     }
 
-    private void doBackgroundColorVeryficationAndMarkLogos(List<Lego> legoLogosOnAnyBackgroundColor)
+    private void doBackgroundColorVerificationAndMarkLogos(List<Lego> legoLogosOnAnyBackgroundColor)
     {
 	RedBackgroundVerifier backgroundVerifier = new RedBackgroundVerifier(originalImage, processingImage);
 	for (Lego lego : legoLogosOnAnyBackgroundColor)

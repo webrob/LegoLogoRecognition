@@ -4,8 +4,6 @@ import com.google.common.collect.Multimap;
 import com.webrob.recognition.domain.Lego;
 import com.webrob.recognition.domain.Letter;
 import com.webrob.recognition.domain.Segment;
-import com.webrob.recognition.utils.GlobalDef;
-import org.opencv.core.Point;
 import org.opencv.core.Rect;
 
 import java.util.ArrayList;
@@ -17,7 +15,6 @@ import java.util.List;
  */
 public class LegoFinder
 {
-
     public List<Lego> findLegoLogos(Multimap<Letter, Segment> recognizedLetters)
     {
 	List<Lego> foundLego = new ArrayList<>();
@@ -55,7 +52,6 @@ public class LegoFinder
 				    boolean isENearG = letterManager.areLettersNearEachOther();
 				    if (isENearG)
 				    {
-
 					letterManager.setLetterToCheckLocation(segmentO);
 					letterManager.setLetterBefore(segmentG);
 
@@ -69,7 +65,6 @@ public class LegoFinder
 					    System.out.println("LEGO!!!!!!!!!!!!!!!!!!!!!!!!!!" + boundingRect +
 							    segmentE.getBoundingRect() + " " + segmentG
 							    .getBoundingRect() + " " + segmentO.getBoundingRect());
-
 
 
 					}

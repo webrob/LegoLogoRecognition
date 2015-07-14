@@ -28,6 +28,11 @@ public class ImageHelper implements ImageProcessingListener
         legoRecognition.addListeners(this);
     }
 
+    public static Image getImageFromPath(String path)
+    {
+	return new Image(URL_FILE_PREFIX + path);
+    }
+
     public void addListener(ProcessedStagesImagesListener listener)
     {
         listeners.add(listener);
@@ -45,11 +50,6 @@ public class ImageHelper implements ImageProcessingListener
 
     }
 
-    public static Image getImageFromPath(String path)
-    {
-	return new Image(URL_FILE_PREFIX + path);
-    }
-
     @Override
     public void imageProcessingHasFinished(ProcessedStagesPaths stagesPaths)
     {
@@ -63,10 +63,10 @@ public class ImageHelper implements ImageProcessingListener
 	String originalImageWithMarkedLegoPath = stagesPaths.getOriginalImageWithMarkedLegoPath();
 	stagesImages.setOriginalImageWithMarkedLegoImage(getImageFromPath(originalImageWithMarkedLegoPath));
 
-        notifiyAllListeners(stagesImages);
+        notifyAllListeners(stagesImages);
     }
 
-    private void notifiyAllListeners(ProcessedStagesImages stagesImages)
+    private void notifyAllListeners(ProcessedStagesImages stagesImages)
     {
         for(ProcessedStagesImagesListener listener : listeners)
         {

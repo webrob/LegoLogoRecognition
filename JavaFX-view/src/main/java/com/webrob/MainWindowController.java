@@ -1,17 +1,16 @@
 package com.webrob;
 
 import com.webrob.logic.ProcessedStagesImagesListener;
+import com.webrob.utils.DirectoryPath;
 import com.webrob.utils.ImageHelper;
 import com.webrob.utils.ProcessedStagesImages;
 import javafx.application.Platform;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import javafx.stage.WindowEvent;
 
 import java.io.File;
 import java.net.URL;
@@ -29,61 +28,64 @@ public class MainWindowController implements Initializable, ProcessedStagesImage
 
     private ImageHelper imageHelper;
     private Stage stage;
+    private String directoryPath;
 
     public void setStage(Stage stage)
     {
 	this.stage = stage;
-        stage.setOnCloseRequest(new EventHandler<WindowEvent>()
-        {
-            @Override public void handle(WindowEvent event)
-            {
-                Platform.exit();
-                System.exit(0);
-            }
-        });
+	stage.setOnCloseRequest(event -> {
+	    Platform.exit();
+	    System.exit(0);
+	});
     }
 
     @Override public void initialize(URL location, ResourceBundle resources)
     {
     }
 
-
     public void openFilePressed()
     {
-        FileChooser fileChooser = new FileChooser();
+	FileChooser fileChooser = new FileChooser();
 	fileChooser.setTitle("Open Resource File");
-	fileChooser.getExtensionFilters().addAll(
-			new FileChooser.ExtensionFilter("Image Files", "*.png", "*.jpg", "*.gif"));
+	fileChooser.getExtensionFilters()
+			.addAll(new FileChooser.ExtensionFilter("Image Files", "*.png", "*.jpg", "*.gif"));
 
+	String initialPath = DirectoryPath.getPath();
+	fileChooser.setInitialDirectory(new File(initialPath));
 	File selectedFile = fileChooser.showOpenDialog(stage);
+	clearAllViews();
 	if (selectedFile != null)
 	{
-            imageHelper = new ImageHelper(selectedFile);
-            imageHelper.addListener(this);
+	    directoryPath = selectedFile.getParentFile().getAbsolutePath();
+	    imageHelper = new ImageHelper(selectedFile);
+	    imageHelper.addListener(this);
 	    Image imageFromFile = imageHelper.getImageFromFile();
 	    orgImageView.setImage(imageFromFile);
 	}
     }
 
-    public void recognizeLegoPressed()
+    private void clearAllViews()
     {
-        imageHelper.recognizeLego();
-
-
+	orgImageView.setImage(null);
+	blackAndWhiteSegmentationImageView.setImage(null);
+	markedLegoWithRedBackgroundSamplingImageView.setImage(null);
+	originalImageWithMarkedLegoImageView.setImage(null);
     }
 
-    @Override
-    public void processedStageImagesAreReady(final ProcessedStagesImages stagesImages)
+    public void recognizeLegoPressed()
     {
-        Platform.runLater(new Runnable()
-        {
-            @Override public void run()
-            {
-                blackAndWhiteSegmentationImageView.setImage(stagesImages.getBlackAndWhiteSegmentationImage());
-                markedLegoWithRedBackgroundSamplingImageView.setImage(stagesImages.getMarkedLegoWithRedBackgroundSamplingImage());
-                originalImageWithMarkedLegoImageView.setImage(stagesImages.getOriginalImageWithMarkedLegoImage());
-            }
-        });
+	DirectoryPath.setPath(directoryPath);
+	imageHelper.recognizeLego();
+    }
+
+    @Override public void processedStageImagesAreReady(final ProcessedStagesImages stagesImages)
+    {
+	Platform.runLater(() -> {
+	    blackAndWhiteSegmentationImageView.setImage(stagesImages.getBlackAndWhiteSegmentationImage());
+	    markedLegoWithRedBackgroundSamplingImageView
+			    .setImage(stagesImages.getMarkedLegoWithRedBackgroundSamplingImage());
+	    originalImageWithMarkedLegoImageView.setImage(stagesImages.getOriginalImageWithMarkedLegoImage());
+	});
     }
 }
 
