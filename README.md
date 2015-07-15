@@ -17,3 +17,5 @@ This projects uses the following technologies:
 </ul>
 
 <a href="https://youtu.be/PD1StJMoskA">Here</a> you can see the video showing a basic usage.
+
+Read documentation_PL file to get more info.
